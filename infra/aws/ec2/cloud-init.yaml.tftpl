@@ -1,0 +1,14 @@
+#cloud-config
+# Sin secretos en este archivo: el login a ECR usa el instance profile y no se imprime.
+write_files:
+  - path: /etc/docker/seccomp-vulnerable.json
+    encoding: b64
+    permissions: "0444"
+    content: ${seccomp_b64}
+runcmd:
+  - dnf install -y docker
+  - systemctl enable --now docker
+%{ if image != "" ~}
+  - "aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${registry_host} > /dev/null 2>&1"
+  - "docker run -d --name php-flaws-demo --restart unless-stopped --read-only --tmpfs /tmp --user 101:101 --cap-drop ALL --security-opt no-new-privileges --security-opt seccomp=/etc/docker/seccomp-vulnerable.json --pids-limit 100 --memory 256m -p 80:8080 ${image}"
+%{ endif ~}
