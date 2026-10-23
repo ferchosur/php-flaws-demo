@@ -1,0 +1,28 @@
+#cloud-config
+# Registro: ${registry_host}
+# El NSG solo permite egreso a 443 y 53: se fuerza HTTPS en los repos de apt.
+write_files:
+  - path: /etc/docker/seccomp-vulnerable.json
+    encoding: b64
+    permissions: "0444"
+    content: ${seccomp_b64}
+  - path: /usr/local/bin/start-app.sh
+    permissions: "0755"
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+      az login --identity --client-id "${client_id}" --output none
+      az acr login --name "${registry_name}" --output none
+      docker run -d --name php-flaws-demo --restart unless-stopped \
+        --read-only --tmpfs /tmp --user 101:101 --cap-drop ALL \
+        --security-opt no-new-privileges \
+        --security-opt seccomp=/etc/docker/seccomp-vulnerable.json \
+        --pids-limit 100 --memory 256m \
+        -p 80:8080 "${image}"
+runcmd:
+  - sed -i 's|http://|https://|g' /etc/apt/sources.list.d/ubuntu.sources || true
+  - apt-get update
+  - apt-get install -y docker.io curl
+  - curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+  - systemctl enable --now docker
+  - /usr/local/bin/start-app.sh
