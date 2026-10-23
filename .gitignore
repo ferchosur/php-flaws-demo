@@ -1,0 +1,20 @@
+# Estado y variables de Terraform: pueden contener IDs, rutas y, en VM, claves SSH generadas.
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.*
+**/terraform.tfvars.json
+**/.terraform.lock.hcl.bak
+crash.log
+
+# Configuración local del operador y artefactos de despliegue.
+deployment.json
+build/
+labs/
+
+# Objetivo vulnerable: no se versiona ni se distribuye desde este repositorio.
+app/vulnerable/
+app/*vulnerable*
+
+# Python
+__pycache__/
+*.pyc

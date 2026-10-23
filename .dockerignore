@@ -1,0 +1,15 @@
+# El contexto de build se limita a web/ y app/ (ver COPY en app/Dockerfile).
+# Excluye estado de Terraform, credenciales, laboratorios y artefactos locales.
+.git/
+infra/
+labs/
+build/
+k8s/
+deployment.json
+README.md
+deploy.py
+**/*.tfstate
+**/*.tfstate.*
+**/.terraform/
+**/terraform.tfvars*
+**/__pycache__/
