@@ -91,9 +91,32 @@ def die(message):
     raise SystemExit(1)
 
 
+# Suggested install commands per tool. Printed (never run) when a dependency is
+# missing, mirroring the 'kind' hint below: the operator chooses to run them.
+INSTALL_HINTS = {
+    "docker": (
+        "Linux:  curl -fsSL https://get.docker.com | sh   (or your distro's package manager)\n"
+        "  macOS:  brew install --cask docker   (then launch Docker Desktop)\n"
+        "  Windows/WSL2: install Docker Desktop and enable WSL integration\n"
+        "  Docs:   https://docs.docker.com/engine/install/"
+    ),
+    "terraform": (
+        "Linux/macOS: brew install terraform   (or your package manager)\n"
+        "  Docs:   https://developer.hashicorp.com/terraform/install"
+    ),
+    "kubectl": (
+        "Linux/macOS: brew install kubectl\n"
+        "  Docs:   https://kubernetes.io/docs/tasks/tools/"
+    ),
+}
+
+
 def tool(name):
     path = shutil.which(name)
     if not path:
+        hint = INSTALL_HINTS.get(name)
+        if hint:
+            die(f"'{name}' was not found in PATH. Install it and retry:\n  {hint}")
         die(f"'{name}' was not found in PATH. Install it before continuing.")
     return path
 
