@@ -8,8 +8,7 @@
 #   - does NOT set disable_functions (exec/system/shell_exec remain available),
 #   - no seccomp applied.
 # Enables command execution and lateral movement inside the lab. Use only in the
-# local cluster or in isolated, ephemeral labs. NEVER on the serverless tier or
-# with broad cloud identity.
+# local cluster or in isolated, ephemeral labs. NEVER with broad cloud identity.
 FROM php:8.5.11-cli-alpine
 
 WORKDIR /srv

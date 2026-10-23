@@ -3,7 +3,7 @@
 # The container runs with the seccomp jail app/seccomp-vulnerable.json (denies
 # escape syscalls; command execution is blocked by PHP disable_functions + the
 # absence of a shell) on VM, and seccompProfile RuntimeDefault + egress-deny
-# NetworkPolicy on Kubernetes. Do not use on the serverless tier.
+# NetworkPolicy on Kubernetes.
 FROM php:8.5.11-cli-alpine
 
 WORKDIR /srv

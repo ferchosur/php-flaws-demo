@@ -1,6 +1,6 @@
 # PHP Flaws Demo — Worst Market
 
-Reusable demo to showcase CVE-2026-109618 and CVE-2026-109619 in a fictional store. The commercial experience is static HTML/JS. The default profile does not include PHP; on VM (EC2, Azure VM, Compute Engine) and Kubernetes (EKS, AKS, GKE) you can explicitly enable a pre-patch PHP runtime for the lab, isolated with a seccomp jail. No profile contains exploitation payloads. The serverless container tier (ECS Fargate, Container Apps, Cloud Run) always stays on safe simulation.
+Reusable demo to showcase CVE-2026-109618 and CVE-2026-109619 in a fictional store. The commercial experience is static HTML/JS. The default profile does not include PHP; on VM (EC2, Azure VM, Compute Engine) and Kubernetes (EKS, AKS, GKE) you can explicitly enable a pre-patch PHP runtime for the lab, isolated with a seccomp jail. No profile contains exploitation payloads. Serverless options are not offered.
 
 ## What's included
 
@@ -13,7 +13,7 @@ Reusable demo to showcase CVE-2026-109618 and CVE-2026-109619 in a fictional sto
 | "Careless prod" runtime | `app/Dockerfile-vulnerable-baseline` | Vulnerable profile with NO hardening (root, shell, `curl`/`nc`, no `disable_functions`, no seccomp) to contrast with the hardened one. Local cluster / isolated labs only; `deploy.py` blocks it in the cloud. |
 | Local cluster | `local-cluster/` | kind scenario (local Kubernetes on Docker) with prerequisites, resources and manifests. See [local-cluster/README.md](local-cluster/README.md). |
 | Menu | `deploy.py` | Interactive menu (Python 3.11+ stdlib): configure, test locally, plan, deploy and destroy. |
-| Infrastructure | `infra/<cloud>/<platform>/` | Nine Terraform roots sharing the same variable contract. |
+| Infrastructure | `infra/<cloud>/<platform>/` | Six Terraform roots (VM and Kubernetes per cloud) sharing the same variable contract. |
 | Kubernetes | `k8s/` | Namespace manifests, with Pod Security `restricted` and default-deny networking. |
 
 ## Deployment options
@@ -25,13 +25,13 @@ There are **four ways** to run the demo, from lowest to highest fidelity. All us
 | 1 | Static preview | See the store (HTML/JS), no backend | Python | — (static only) | `python -m http.server 8000 -d web` |
 | 2 | Single Docker container | Quick image test | Docker | all three | `python deploy.py local` |
 | 3 | Local kind cluster | Reproduce K8s on your machine (ideal for exploit testing) | Docker, kind, kubectl | all three | `python deploy.py local-cluster` |
-| 4 | Cloud (AWS/Azure/GCP) | Real public environment (VM, Kubernetes or serverless) | Authenticated cloud CLI, Terraform, Docker | safe · hardened vulnerable | `python deploy.py` → configure → deploy |
+| 4 | Cloud (AWS/Azure/GCP) | Real public environment (VM or Kubernetes) | Authenticated cloud CLI, Terraform, Docker | safe · hardened vulnerable | `python deploy.py` → configure → deploy |
 
 `python deploy.py` (no arguments) opens the interactive menu with every action; direct subcommands also exist: `configure`, `local`, `local-cluster`, `local-cluster-down`, `plan`, `deploy`, `destroy`. `deployment.json` stores the configuration (no secrets).
 
 ### Runtime profiles
 
-Chosen during **Configure** (step 2a), available in options 2, 3 and 4 (in option 4, VM and Kubernetes only):
+Chosen during **Configure** (step 2a), available in options 2, 3 and 4 (in option 4, safe and hardened vulnerable only):
 
 | Profile | What it is | Where it's allowed |
 |---|---|---|
@@ -78,13 +78,13 @@ Requires `kind` (if missing, `deploy.py` prints the install command) and `kubect
 
 Real public environment. Platform matrix:
 
-| Cloud | Serverless container | Virtual machine | Kubernetes |
-|---|---|---|---|
-| AWS | ECS Fargate + ALB | EC2 (cloud-init) | EKS |
-| Azure | Container Apps | Virtual Machine (cloud-init) | AKS |
-| GCP | Cloud Run | Compute Engine (COS) | GKE |
+| Cloud | Virtual machine | Kubernetes |
+|---|---|---|
+| AWS | EC2 (cloud-init) | EKS |
+| Azure | Virtual Machine (cloud-init) | AKS |
+| GCP | Compute Engine (COS) | GKE |
 
-Lambda, Azure Functions and Cloud Functions are not offered: a site serving HTML and static assets fits better in serverless containers, which fill the "function" role without the packaging overhead. The vulnerable profile is VM- and Kubernetes-only; serverless stays on safe simulation.
+Serverless (Lambda, Azure Functions, Cloud Functions, ECS Fargate, Container Apps, Cloud Run) is not offered: the seccomp jail and egress-deny cannot be applied there with the same control as on VM and Kubernetes.
 
 **Step by step:**
 
@@ -122,7 +122,7 @@ The goal is that if someone exploits the application, they have no way to run sy
 | No workload identity; only the pull identity, scoped to the repository | All roots |
 | No SSH, no keys in the image, no secrets in environment variables | All |
 | Public HTTP ingress to the entry point only | All |
-| Restricted egress: ECS with no NAT and private endpoints; VM with NSG/firewall only 443 and DNS; K8s with NetworkPolicy | See residuals table |
+| Restricted egress: VM with NSG/firewall only 443 and DNS; K8s with NetworkPolicy | See residuals table |
 | IMDSv2 required with hop limit 1 | EC2, EKS nodes |
 | Pod Security `restricted`, no service account token, quotas and LimitRange | `k8s/` |
 | `created_by`, `expires_at`, `app`, `managed_by` labels on every resource | `locals.tf` / `labels` |
@@ -131,8 +131,6 @@ The goal is that if someone exploits the application, they have no way to run sy
 
 | Platform | Residual |
 |---|---|
-| Cloud Run | Egress to the internet by default (no VPC connector). |
-| Container Apps | No VNet, free egress. No read-only filesystem (unsupported). |
 | AKS / GKE / EKS | Nodes have egress (AKS: no NAT; EKS: one NAT gateway; GKE: no NAT, Google APIs only). |
 | EKS | `AmazonEC2ContainerRegistryReadOnly` can read every repository in the account. The `LoadBalancer` Service requires installing the AWS Load Balancer Controller, which this root does not install. |
 | EC2 | The instance role can call `GetAuthorizationToken` on `*`. The public IP is stable (Elastic IP); an unassociated EIP bills if the instance is destroyed without releasing the EIP. |

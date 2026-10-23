@@ -38,7 +38,6 @@ CLOUDS = {
         "label": "AWS",
         "default_region": "us-east-1",
         "platforms": {
-            "ecs": ("ECS Fargate", "serverless containers behind an Application Load Balancer"),
             "ec2": ("EC2", "virtual machine with Docker (cloud-init)"),
             "eks": ("EKS", "managed Kubernetes cluster"),
         },
@@ -48,7 +47,6 @@ CLOUDS = {
         "label": "Azure",
         "default_region": "eastus",
         "platforms": {
-            "container-apps": ("Container Apps", "serverless containers with HTTPS ingress"),
             "vm": ("Virtual Machines", "Linux virtual machine with Docker (cloud-init)"),
             "aks": ("AKS", "managed Kubernetes cluster"),
         },
@@ -58,7 +56,6 @@ CLOUDS = {
         "label": "GCP",
         "default_region": "us-central1",
         "platforms": {
-            "cloud-run": ("Cloud Run", "serverless containers with HTTPS"),
             "compute-engine": ("Compute Engine", "virtual machine with Container-Optimized OS"),
             "gke": ("GKE", "managed Kubernetes cluster"),
         },
@@ -67,10 +64,6 @@ CLOUDS = {
 }
 K8S_PLATFORMS = {"eks", "aks", "gke"}
 VM_PLATFORMS = {"ec2", "vm", "compute-engine"}
-# The vulnerable PHP profile is offered only on VM and Kubernetes; the serverless
-# container tier (ECS Fargate, Container Apps, Cloud Run) stays on safe simulation,
-# because the seccomp jail and egress-deny cannot be applied with the same control.
-VULN_PLATFORMS = VM_PLATFORMS | K8S_PLATFORMS
 
 DOCKERFILES = {
     "safe-simulation": "Dockerfile",
@@ -215,17 +208,15 @@ def configure(current):
         [(key, f"{name}: {desc}") for key, (name, desc) in platforms.items()],
         default=current.get("platform") if current.get("provider") == provider else None,
     )
-    demo_mode = "safe-simulation"
-    if platform in VULN_PLATFORMS:
-        demo_mode = choose(
-            "2a. Runtime profile",
-            [
-                ("safe-simulation", "Safe simulation with static nginx"),
-                ("vulnerable-php", "PHP 8.5.11 vulnerable, hardened with a seccomp jail (confirmation on deploy)"),
-                ("vulnerable-baseline", "PHP 8.5.11 vulnerable, NOT hardened (careless prod; prefer the local cluster)"),
-            ],
-            default=current.get("demo_mode", "safe-simulation") if current.get("platform") == platform else "safe-simulation",
-        )
+    demo_mode = choose(
+        "2a. Runtime profile",
+        [
+            ("safe-simulation", "Safe simulation with static nginx"),
+            ("vulnerable-php", "PHP 8.5.11 vulnerable, hardened with a seccomp jail (confirmation on deploy)"),
+            ("vulnerable-baseline", "PHP 8.5.11 vulnerable, NOT hardened (careless prod; prefer the local cluster)"),
+        ],
+        default=current.get("demo_mode", "safe-simulation") if current.get("platform") == platform else "safe-simulation",
+    )
     same_cloud = current.get("provider") == provider
     region = ask(
         "3. Region",
@@ -507,8 +498,6 @@ def action_deploy(config):
     if config.get("demo_mode") == BASELINE_MODE:
         die("the 'careless prod' profile (unhardened) is not deployed to the cloud from this menu: it enables egress and command execution with no containment and could pivot into the account. Use it with 'local-cluster' (or 'local').")
     if config.get("demo_mode") == "vulnerable-php":
-        if config["platform"] not in VULN_PLATFORMS:
-            die("the vulnerable profile is only enabled on VM (EC2, Azure VM, Compute Engine) and Kubernetes (EKS, AKS, GKE).")
         if not confirm_word(
             "DEPLOY-VULNERABLE",
             "WARNING: this will publish a vulnerable PHP runtime. Isolation: seccomp jail (escape syscalls denied), no shell or extra binaries, PHP command functions disabled, egress deny (K8s) or NSG/firewall 443+DNS (VM), no cloud identity or root.",
@@ -578,8 +567,6 @@ def action_local(config):
     demo_mode = config.get("demo_mode", "safe-simulation")
     hardened_vuln = demo_mode == "vulnerable-php"
     baseline = demo_mode == BASELINE_MODE
-    if hardened_vuln and config["platform"] not in VULN_PLATFORMS:
-        die("the hardened vulnerable profile is only enabled on VM and Kubernetes; use 'careless prod' or the safe simulation otherwise.")
     dockerfile = DOCKERFILES[demo_mode]
     seccomp_profile = ROOT / "app" / "seccomp-vulnerable.json"
     run(["docker", "build", "-f", str(ROOT / "app" / dockerfile), "-t", image, str(ROOT)])
