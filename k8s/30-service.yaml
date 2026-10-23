@@ -1,0 +1,18 @@
+# Único punto de entrada público: HTTP en 80 que llega al contenedor en 8080.
+apiVersion: v1
+kind: Service
+metadata:
+  name: php-flaws-demo
+  namespace: php-flaws-demo
+  labels:
+    created_by: __OWNER__
+    app: php-flaws-demo
+spec:
+  type: LoadBalancer
+  selector:
+    app: php-flaws-demo
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      protocol: TCP

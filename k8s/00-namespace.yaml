@@ -1,0 +1,12 @@
+# Namespace dedicado con Pod Security Standards "restricted" en modo enforce.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: php-flaws-demo
+  labels:
+    created_by: __OWNER__
+    app: php-flaws-demo
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted

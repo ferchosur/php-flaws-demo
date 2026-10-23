@@ -1,0 +1,60 @@
+# Denegación por defecto de ingreso y egreso. Solo se permite:
+#   - ingreso HTTP al contenedor web (8080);
+#   - egreso DNS hacia kube-dns.
+# El pod no puede abrir conexiones hacia la red interna ni hacia otros pods.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: php-flaws-demo
+  labels:
+    created_by: __OWNER__
+    app: php-flaws-demo
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-public-http
+  namespace: php-flaws-demo
+  labels:
+    created_by: __OWNER__
+    app: php-flaws-demo
+spec:
+  podSelector:
+    matchLabels:
+      app: php-flaws-demo
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-egress
+  namespace: php-flaws-demo
+  labels:
+    created_by: __OWNER__
+    app: php-flaws-demo
+spec:
+  podSelector:
+    matchLabels:
+      app: php-flaws-demo
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
