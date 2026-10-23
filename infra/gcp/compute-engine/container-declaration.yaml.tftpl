@@ -1,0 +1,23 @@
+spec:
+  containers:
+    - name: app
+      image: ${image}
+      securityContext:
+        privileged: false
+      stdin: false
+      tty: false
+      volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+          readOnly: false
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+          readOnly: false
+  restartPolicy: Always
+  volumes:
+    - name: tmp
+      emptyDir:
+        medium: Memory
+    - name: nginx-cache
+      emptyDir:
+        medium: Memory
