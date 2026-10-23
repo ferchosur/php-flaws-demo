@@ -1,4 +1,4 @@
-"""Deployment menu for Mercado Norte (PHP Flaws Demo).
+"""Deployment menu for Worst Market (PHP Flaws Demo).
 
 Configures the cloud and infrastructure, builds the image, publishes it to the
 provider's private registry and applies Terraform. Uses only the Python 3.11+
@@ -718,7 +718,7 @@ MENU = [
 
 
 def interactive():
-    print("PHP Flaws Demo — Mercado Norte\nSafe profile by default; vulnerable PHP on VM and Kubernetes with explicit confirmation.")
+    print("PHP Flaws Demo — Worst Market\nSafe profile by default; vulnerable PHP on VM and Kubernetes with explicit confirmation.")
     while True:
         print("\nMain menu")
         for key, label in MENU:
@@ -760,7 +760,7 @@ def interactive():
 def main(argv):
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Deployment of Mercado Norte (PHP Flaws Demo).")
+    parser = argparse.ArgumentParser(description="Deployment of Worst Market (PHP Flaws Demo).")
     parser.add_argument("command", nargs="?", choices=["configure", "show", "local", "plan", "deploy", "destroy", "local-cluster", "local-cluster-down"])
     args = parser.parse_args(argv)
     if args.command is None:

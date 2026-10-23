@@ -1,11 +1,11 @@
-// Mercado Norte: tienda estática con carrito y pedidos simulados.
-// Todo el contenido dinámico pasa por esc() antes de llegar al DOM. No hay red ni backend.
+// Worst Market: static store with a cart and simulated orders.
+// All dynamic content passes through esc() before reaching the DOM. No network or backend.
 (function () {
   "use strict";
 
-  const CART_KEY = "mn-cart";
-  const ORDERS_KEY = "mn-orders-v2";
-  try { localStorage.removeItem("mn-orders"); } catch (_) { /* almacenamiento no disponible */ }
+  const CART_KEY = "wm-cart";
+  const ORDERS_KEY = "wm-orders-v2";
+  try { localStorage.removeItem("wm-orders"); } catch (_) { /* storage not available */ }
   const view = document.getElementById("main");
   const money = (n) => "$" + n.toFixed(2);
 
@@ -18,7 +18,7 @@
       .replace(/'/g, "&#39;");
   }
 
-  // localStorage puede no estar disponible (modo privado, cookies bloqueadas).
+  // localStorage may be unavailable (private mode, blocked cookies).
   function load(key, fallback) {
     try {
       const raw = localStorage.getItem(key);
@@ -32,7 +32,7 @@
     try {
       localStorage.setItem(key, JSON.stringify(value));
     } catch (_) {
-      /* Sin almacenamiento: el carrito sigue funcionando durante la visita. */
+      /* No storage: the cart still works during the visit. */
     }
   }
 
@@ -65,7 +65,7 @@
 
   function productCard(p) {
     return `
-      <a class="card product-card" href="#/producto/${esc(p.id)}">
+      <a class="card product-card" href="#/product/${esc(p.id)}">
         <div class="thumb ${esc(p.tone)}" aria-hidden="true">${esc(p.name.charAt(0))}</div>
         <div class="product-meta">
           <span class="tag">${esc(p.category)}</span>
@@ -81,15 +81,15 @@
     view.innerHTML = `
       <section class="hero">
         <div class="hero-in">
-          <div class="eyebrow">Envíos a todo el país · Devoluciones en 30 días</div>
-          <h1>Lo esencial para la casa, la oficina y el camino</h1>
-          <p>Productos seleccionados por nuestro equipo, con garantía y atención en español.</p>
-          <a class="button" href="#/catalogo">Ver catálogo</a>
+          <div class="eyebrow">Nationwide shipping · 30-day returns</div>
+          <h1>The essentials for home, office and the road</h1>
+          <p>Products curated by our team, with warranty and customer support.</p>
+          <a class="button" href="#/catalog">View catalog</a>
         </div>
       </section>
-      <h2 class="section-title">Destacados</h2>
+      <h2 class="section-title">Featured</h2>
       <div class="grid-products">${featured}</div>
-      <p class="notice-inline">Esta tienda es una simulación. Puedes explorar el catálogo, armar un carrito y completar un pedido de prueba.</p>`;
+      <p class="notice-inline">This store is a simulation. You can browse the catalog, build a cart and complete a test order.</p>`;
   }
 
   function renderCatalog(params) {
@@ -105,16 +105,16 @@
       .map((c) => `<option value="${esc(c)}"${c === cat ? " selected" : ""}>${esc(c)}</option>`)
       .join("");
     view.innerHTML = `
-      <h1 class="page-title">Catálogo</h1>
+      <h1 class="page-title">Catalog</h1>
       <form class="filters" id="filters" role="search">
-        <label>Buscar <input type="search" name="q" value="${esc(q)}" placeholder="Ej. lámpara"></label>
-        <label>Categoría
-          <select name="cat"><option value="">Todas</option>${options}</select>
+        <label>Search <input type="search" name="q" value="${esc(q)}" placeholder="e.g. lamp"></label>
+        <label>Category
+          <select name="cat"><option value="">All</option>${options}</select>
         </label>
-        <button class="button" type="submit">Filtrar</button>
+        <button class="button" type="submit">Filter</button>
       </form>
-      <p class="muted">${items.length} producto(s)</p>
-      <div class="grid-products">${items.map(productCard).join("") || '<p class="muted">No encontramos productos con ese filtro.</p>'}</div>`;
+      <p class="muted">${items.length} product(s)</p>
+      <div class="grid-products">${items.map(productCard).join("") || '<p class="muted">No products match that filter.</p>'}</div>`;
     document.getElementById("filters").addEventListener("submit", (event) => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
@@ -122,7 +122,7 @@
       if (form.get("q")) next.set("q", String(form.get("q")));
       if (form.get("cat")) next.set("cat", String(form.get("cat")));
       const query = next.toString();
-      location.hash = "#/catalogo" + (query ? "?" + query : "");
+      location.hash = "#/catalog" + (query ? "?" + query : "");
     });
   }
 
@@ -130,7 +130,7 @@
     const p = findProduct(id);
     if (!p) return renderNotFound();
     view.innerHTML = `
-      <nav class="crumbs"><a href="#/catalogo">Catálogo</a> / ${esc(p.category)}</nav>
+      <nav class="crumbs"><a href="#/catalog">Catalog</a> / ${esc(p.category)}</nav>
       <div class="product-detail card">
         <div class="thumb large ${esc(p.tone)}" aria-hidden="true">${esc(p.name.charAt(0))}</div>
         <div>
@@ -138,10 +138,10 @@
           <h1>${esc(p.name)}</h1>
           <p class="price big">${money(p.price)}</p>
           <p>${esc(p.description)}</p>
-          <p class="muted">${esc(p.summary)} · ${p.stock > 10 ? "En stock" : "Últimas unidades"}</p>
+          <p class="muted">${esc(p.summary)} · ${p.stock > 10 ? "In stock" : "Last units"}</p>
           <form id="add-form" class="add-form">
-            <label>Cantidad <input type="number" name="qty" min="1" max="10" value="1"></label>
-            <button class="button" type="submit">Agregar al carrito</button>
+            <label>Quantity <input type="number" name="qty" min="1" max="10" value="1"></label>
+            <button class="button" type="submit">Add to cart</button>
           </form>
           <p class="status" id="status" aria-live="polite"></p>
         </div>
@@ -154,15 +154,15 @@
         ? cart.map((line) => (line.id === p.id ? { ...line, qty: Math.min(10, line.qty + qty) } : line))
         : [...cart, { id: p.id, qty }];
       setCart(next);
-      document.getElementById("status").textContent = `Agregado: ${qty} × ${p.name}.`;
+      document.getElementById("status").textContent = `Added: ${qty} × ${p.name}.`;
     });
   }
 
   function renderCart() {
     if (cart.length === 0) {
       view.innerHTML = `
-        <h1 class="page-title">Carrito</h1>
-        <div class="card empty"><p>Tu carrito está vacío.</p><a class="button" href="#/catalogo">Explorar productos</a></div>`;
+        <h1 class="page-title">Cart</h1>
+        <div class="card empty"><p>Your cart is empty.</p><a class="button" href="#/catalog">Browse products</a></div>`;
       return;
     }
     const rows = cart
@@ -171,30 +171,30 @@
         return `
           <div class="cart-row" data-id="${esc(p.id)}">
             <div class="thumb small ${esc(p.tone)}" aria-hidden="true">${esc(p.name.charAt(0))}</div>
-            <div class="cart-name"><a href="#/producto/${esc(p.id)}">${esc(p.name)}</a><small>${money(p.price)} c/u</small></div>
+            <div class="cart-name"><a href="#/product/${esc(p.id)}">${esc(p.name)}</a><small>${money(p.price)} each</small></div>
             <div class="qty">
-              <button type="button" data-act="dec" aria-label="Quitar uno">−</button>
+              <button type="button" data-act="dec" aria-label="Remove one">−</button>
               <span>${line.qty}</span>
-              <button type="button" data-act="inc" aria-label="Agregar uno">+</button>
+              <button type="button" data-act="inc" aria-label="Add one">+</button>
             </div>
             <div class="price">${money(p.price * line.qty)}</div>
-            <button type="button" class="link" data-act="remove">Quitar</button>
+            <button type="button" class="link" data-act="remove">Remove</button>
           </div>`;
       })
       .join("");
     const t = totals();
     view.innerHTML = `
-      <h1 class="page-title">Carrito</h1>
+      <h1 class="page-title">Cart</h1>
       <div class="cart-layout">
         <section class="card" id="cart-lines">${rows}</section>
         <aside class="card summary">
-          <h2>Resumen</h2>
+          <h2>Summary</h2>
           <div><span>Subtotal</span><span>${money(t.subtotal)}</span></div>
-          <div><span>Envío</span><span>${t.shipping === 0 ? "Gratis" : money(t.shipping)}</span></div>
-          <div><span>Impuesto estimado (13%)</span><span>${money(t.tax)}</span></div>
+          <div><span>Shipping</span><span>${t.shipping === 0 ? "Free" : money(t.shipping)}</span></div>
+          <div><span>Estimated tax (13%)</span><span>${money(t.tax)}</span></div>
           <div class="total"><span>Total</span><span>${money(t.total)}</span></div>
-          <a class="button wide" href="#/checkout">Continuar al pago</a>
-          <p class="muted small">Envío gratis desde ${money(FREE_SHIPPING_FROM)}.</p>
+          <a class="button wide" href="#/checkout">Continue to payment</a>
+          <p class="muted small">Free shipping from ${money(FREE_SHIPPING_FROM)}.</p>
         </aside>
       </div>`;
     document.getElementById("cart-lines").addEventListener("click", (event) => {
@@ -216,33 +216,33 @@
 
   function renderCheckout() {
     if (cart.length === 0) {
-      location.hash = "#/carrito";
+      location.hash = "#/cart";
       return;
     }
     const t = totals();
     view.innerHTML = `
-      <h1 class="page-title">Finalizar compra</h1>
+      <h1 class="page-title">Checkout</h1>
       <div class="cart-layout">
         <form class="card form" id="checkout" novalidate>
-          <h2>Datos de envío</h2>
-          <p class="notice-inline">Usa datos ficticios. El pedido es local y simulado: no ingreses información personal ni de pago real.</p>
-          <label>Nombre completo <input name="name" autocomplete="name" required maxlength="80"></label>
-          <label>Correo electrónico <input type="email" name="email" autocomplete="email" required maxlength="120"></label>
-          <label>Dirección <input name="address" autocomplete="street-address" required maxlength="160"></label>
-          <label>Ciudad <input name="city" autocomplete="address-level2" required maxlength="80"></label>
-          <h2>Pago</h2>
+          <h2>Shipping details</h2>
+          <p class="notice-inline">Use fictional data. The order is local and simulated: do not enter real personal or payment information.</p>
+          <label>Full name <input name="name" autocomplete="name" required maxlength="80"></label>
+          <label>Email <input type="email" name="email" autocomplete="email" required maxlength="120"></label>
+          <label>Address <input name="address" autocomplete="street-address" required maxlength="160"></label>
+          <label>City <input name="city" autocomplete="address-level2" required maxlength="80"></label>
+          <h2>Payment</h2>
           <fieldset class="methods">
-            <label><input type="radio" name="method" value="simulado" checked> Pago simulado (no se cobra nada)</label>
-            <label><input type="radio" name="method" value="transferencia"> Transferencia bancaria (simulada)</label>
+            <label><input type="radio" name="method" value="simulated" checked> Simulated payment (nothing is charged)</label>
+            <label><input type="radio" name="method" value="transfer"> Bank transfer (simulated)</label>
           </fieldset>
-          <p class="muted small">No solicitamos datos de tarjeta en esta demostración.</p>
+          <p class="muted small">We do not request card details in this demonstration.</p>
           <p class="error" id="form-error" role="alert"></p>
-          <button class="button wide" type="submit">Confirmar pedido por ${money(t.total)}</button>
+          <button class="button wide" type="submit">Confirm order for ${money(t.total)}</button>
         </form>
         <aside class="card summary">
-          <h2>Tu pedido</h2>
+          <h2>Your order</h2>
           ${cart.map((line) => `<div><span>${esc(line.qty)} × ${esc(findProduct(line.id).name)}</span><span>${money(findProduct(line.id).price * line.qty)}</span></div>`).join("")}
-          <div><span>Envío</span><span>${t.shipping === 0 ? "Gratis" : money(t.shipping)}</span></div>
+          <div><span>Shipping</span><span>${t.shipping === 0 ? "Free" : money(t.shipping)}</span></div>
           <div class="total"><span>Total</span><span>${money(t.total)}</span></div>
         </aside>
       </div>`;
@@ -256,17 +256,17 @@
     const error = document.getElementById("form-error");
     const fields = ["name", "email", "address", "city"].map((key) => String(form.get(key) || "").trim());
     if (fields.some((value) => value === "")) {
-      error.textContent = "Completa todos los campos de envío.";
+      error.textContent = "Fill in all shipping fields.";
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields[1])) {
-      error.textContent = "Revisa el correo electrónico.";
+      error.textContent = "Check the email address.";
       return;
     }
-    const code = "MN-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+    const code = "WM-" + Math.random().toString(36).slice(2, 8).toUpperCase();
     const t = totals();
     const orders = load(ORDERS_KEY, []);
-    // Solo persiste los datos necesarios para mostrar el recibo; nunca la información del formulario.
+    // Only persists the data needed to show the receipt; never the form information.
     orders.unshift({
       code,
       date: new Date().toISOString(),
@@ -275,12 +275,12 @@
     });
     save(ORDERS_KEY, orders.slice(0, 20));
     setCart([]);
-    location.hash = "#/pedido/" + code;
+    location.hash = "#/order/" + code;
   }
 
   function renderOrder(code) {
     const order = load(ORDERS_KEY, []).find((o) => o.code === code);
-    if (!order) return renderNotFound("No encontramos ese pedido en este navegador.");
+    if (!order) return renderNotFound("We couldn't find that order in this browser.");
     const lines = order.lines
       .map((line) => {
         const p = findProduct(line.id);
@@ -289,74 +289,74 @@
       .join("");
     view.innerHTML = `
       <div class="card confirm">
-        <div class="eyebrow">Pedido confirmado</div>
-        <h1>Gracias por probar Mercado Norte</h1>
-        <p>Código de pedido: <b>${esc(order.code)}</b></p>
-        <p class="muted">Este pedido es una simulación y no genera cargos ni guarda datos personales.</p>
+        <div class="eyebrow">Order confirmed</div>
+        <h1>Thanks for trying Worst Market</h1>
+        <p>Order code: <b>${esc(order.code)}</b></p>
+        <p class="muted">This order is a simulation and does not generate charges or store personal data.</p>
         <div class="summary">${lines}<div class="total"><span>Total</span><span>${money(order.total)}</span></div></div>
-        <a class="button" href="#/catalogo">Seguir comprando</a>
+        <a class="button" href="#/catalog">Keep shopping</a>
       </div>`;
   }
 
-  // Storyboard conceptual. No genera ni envía una petición de explotación.
+  // Conceptual storyboard. It does not generate or send an exploitation request.
   const SCENARIOS = {
     vulnerable: {
-      label: "Runtime vulnerable (conceptual)",
+      label: "Vulnerable runtime (conceptual)",
       steps: [
-        { title: "Solicitud HTTP", detail: "La petición llega al servidor web. En estos CVE, el procesamiento ocurre dentro del runtime PHP; la validación de la aplicación puede no ejecutarse antes." },
-        { title: "Runtime PHP afectado", detail: "CVE-2026-109618: una ruta de error por falta de memoria puede dejar estado interno inconsistente. CVE-2026-109619: estado interno liberado puede seguir referenciado." },
-        { title: "Ejecución en el proceso", detail: "En una instalación afectada, el resultado reportado es ejecución remota de código. El alcance inmediato depende de la configuración y permisos del proceso." },
-        { title: "Límite del contenedor", detail: "Sin aislamiento adicional, el proceso podría acceder a los archivos y recursos disponibles para su usuario y su red." },
+        { title: "HTTP request", detail: "The request reaches the web server. In these CVEs, processing happens inside the PHP runtime; application validation may not run first." },
+        { title: "Affected PHP runtime", detail: "CVE-2026-109618: an out-of-memory error path can leave internal state inconsistent. CVE-2026-109619: freed internal state may still be referenced." },
+        { title: "In-process execution", detail: "On an affected installation, the reported result is remote code execution. The immediate scope depends on the process configuration and permissions." },
+        { title: "Container boundary", detail: "Without additional isolation, the process could access the files and resources available to its user and its network." },
       ],
-      outcome: "Storyboard terminado. No se envió tráfico, no se ejecutó código y esta tienda no usa PHP.",
+      outcome: "Storyboard finished. No traffic was sent, no code was executed and this store does not use PHP.",
     },
     isolated: {
-      label: "Contención del despliegue de esta demo",
+      label: "Containment of this demo's deployment",
       steps: [
-        { title: "Solicitud HTTP", detail: "Mercado Norte sirve archivos estáticos; no procesa solicitudes con PHP." },
-        { title: "Runtime ausente", detail: "La imagen nginx no incluye intérprete PHP ni FastCGI. Este sitio no reproduce ni es vulnerable a estos CVE." },
-        { title: "Proceso sin privilegios", detail: "La imagen y los manifiestos ejecutan nginx como UID 101, sin capacidades Linux y con escalamiento de privilegios desactivado." },
-        { title: "Límites de impacto", detail: "El despliegue omite identidad del workload y limita filesystem y egreso según la plataforma. Consulta riesgos residuales en README." },
+        { title: "HTTP request", detail: "Worst Market serves static files; it does not process requests with PHP." },
+        { title: "Runtime absent", detail: "The nginx image includes no PHP interpreter or FastCGI. This site neither reproduces nor is vulnerable to these CVEs." },
+        { title: "Unprivileged process", detail: "The image and manifests run nginx as UID 101, with no Linux capabilities and privilege escalation disabled." },
+        { title: "Impact limits", detail: "The deployment omits workload identity and limits filesystem and egress per platform. See residual risks in the README." },
       ],
-      outcome: "Recorrido de controles terminado. Para corregir una app PHP real, instala la versión corregida; la contención no parchea el runtime.",
+      outcome: "Controls walkthrough finished. To fix a real PHP app, install the fixed version; containment does not patch the runtime.",
     },
   };
 
   function renderSecurity() {
     const vulnerableRuntime = window.MN_DEMO_MODE === "vulnerable-runtime";
     const scopeNote = vulnerableRuntime
-      ? "Perfil activo: PHP 8.5.11, anterior a la versión corregida 8.5.12. El recorrido no envía una petición de explotación ni ejecuta un payload."
-      : "Perfil activo: sitio estático sin PHP. El runtime vulnerable se puede seleccionar solo para despliegues Kubernetes aislados.";
+      ? "Active profile: PHP 8.5.11, prior to the fixed version 8.5.12. The walkthrough does not send an exploitation request or run a payload."
+      : "Active profile: static site without PHP. The vulnerable runtime can only be selected for isolated Kubernetes deployments.";
     SCENARIOS.vulnerable.outcome = vulnerableRuntime
-      ? "Storyboard terminado. PHP 8.5.11 está activo, pero no se envió tráfico de explotación ni se ejecutó un payload."
-      : "Storyboard terminado. No se envió tráfico, no se ejecutó código y este perfil no usa PHP.";
+      ? "Storyboard finished. PHP 8.5.11 is active, but no exploitation traffic was sent and no payload was executed."
+      : "Storyboard finished. No traffic was sent, no code was executed and this profile does not use PHP.";
     SCENARIOS.isolated.steps = vulnerableRuntime
       ? [
-          { title: "Runtime PHP 8.5.11", detail: "Este perfil sí carga las solicitudes en una versión anterior a la corrección oficial. Una explotación real podría ejecutar código dentro del proceso PHP." },
-          { title: "Proceso sin privilegios", detail: "El proceso usa UID 101, no es root y no tiene capacidades Linux. Las funciones PHP para invocar comandos están desactivadas." },
-          { title: "Sin shell ni escritura persistente", detail: "La imagen elimina los intérpretes de comandos; el filesystem raíz es de solo lectura y /tmp es efímero." },
-          { title: "Egreso e identidad", detail: "Las NetworkPolicy de Kubernetes deniegan egreso salvo DNS; el pod no recibe token de ServiceAccount ni identidad cloud." },
+          { title: "PHP 8.5.11 runtime", detail: "This profile does load requests on a version prior to the official fix. A real exploit could execute code inside the PHP process." },
+          { title: "Unprivileged process", detail: "The process uses UID 101, is not root and has no Linux capabilities. PHP functions that invoke commands are disabled." },
+          { title: "No shell or persistent writes", detail: "The image removes the command interpreters; the root filesystem is read-only and /tmp is ephemeral." },
+          { title: "Egress and identity", detail: "Kubernetes NetworkPolicy denies egress except DNS; the pod gets no ServiceAccount token or cloud identity." },
         ]
       : [
-          { title: "Solicitud HTTP", detail: "Mercado Norte sirve archivos estáticos; no procesa solicitudes con PHP." },
-          { title: "Runtime ausente", detail: "La imagen nginx no incluye intérprete PHP ni FastCGI. Este sitio no reproduce ni es vulnerable a estos CVE." },
-          { title: "Proceso sin privilegios", detail: "La imagen y los manifiestos ejecutan nginx como UID 101, sin capacidades Linux y con escalamiento de privilegios desactivado." },
-          { title: "Límites de impacto", detail: "El despliegue omite identidad del workload y limita filesystem y egreso según la plataforma. Consulta riesgos residuales en README." },
+          { title: "HTTP request", detail: "Worst Market serves static files; it does not process requests with PHP." },
+          { title: "Runtime absent", detail: "The nginx image includes no PHP interpreter or FastCGI. This site neither reproduces nor is vulnerable to these CVEs." },
+          { title: "Unprivileged process", detail: "The image and manifests run nginx as UID 101, with no Linux capabilities and privilege escalation disabled." },
+          { title: "Impact limits", detail: "The deployment omits workload identity and limits filesystem and egress per platform. See residual risks in the README." },
         ];
     view.innerHTML = `
-      <h1 class="page-title">Demo de seguridad: CVE en PHP</h1>
+      <h1 class="page-title">Security demo: PHP CVEs</h1>
       <div class="card">
-        <p><code>CVE-2026-109618</code> y <code>CVE-2026-109619</code> son fallas del runtime PHP que pueden permitir ejecución remota de código en instalaciones afectadas. El fallo puede ocurrir antes de que la aplicación procese la petición.</p>
-        <p class="notice-inline"><b>Alcance de esta demo:</b> ${esc(scopeNote)} Los recorridos son un storyboard educativo; no envían solicitudes de ataque ni ejecutan código.</p>
-        <div class="scenario-picker" role="group" aria-label="Escenario">
-          <button class="button scenario-choice active" data-scenario="vulnerable" type="button">Ver cadena de riesgo</button>
-          <button class="button scenario-choice secondary" data-scenario="isolated" type="button">Ver contención aplicada</button>
+        <p><code>CVE-2026-109618</code> and <code>CVE-2026-109619</code> are PHP runtime flaws that may allow remote code execution on affected installations. The flaw can occur before the application processes the request.</p>
+        <p class="notice-inline"><b>Scope of this demo:</b> ${esc(scopeNote)} The walkthroughs are an educational storyboard; they do not send attack requests or execute code.</p>
+        <div class="scenario-picker" role="group" aria-label="Scenario">
+          <button class="button scenario-choice active" data-scenario="vulnerable" type="button">View risk chain</button>
+          <button class="button scenario-choice secondary" data-scenario="isolated" type="button">View applied containment</button>
         </div>
         <p class="muted" id="scenario-label"></p>
-        <button class="button" id="run-scenario" type="button">Recorrer escenario</button>
+        <button class="button" id="run-scenario" type="button">Walk through scenario</button>
         <ol class="steps" id="steps"></ol>
         <p class="status" id="scenario-status" aria-live="polite"></p>
-        <div class="cve-recommendation"><b>Mitigación principal</b><p>Actualizar PHP a una versión corregida según el aviso oficial. Las restricciones de contenedor reducen el impacto potencial, pero no corrigen la vulnerabilidad.</p><a href="https://www.php.net/archive/2026.php" target="_blank" rel="noreferrer">Aviso de seguridad de PHP</a></div>
+        <div class="cve-recommendation"><b>Primary mitigation</b><p>Update PHP to a fixed version per the official advisory. Container restrictions reduce the potential impact, but do not fix the vulnerability.</p><a href="https://www.php.net/archive/2026.php" target="_blank" rel="noreferrer">PHP security advisory</a></div>
       </div>`;
     let selected = "vulnerable";
     const renderSteps = () => {
@@ -367,7 +367,7 @@
           <li class="step" data-index="${i}">
             <span class="step-num">${i + 1}</span>
             <div><b>${esc(step.title)}</b><p>${esc(step.detail)}</p></div>
-            <span class="step-state">Pendiente</span>
+            <span class="step-state">Pending</span>
           </li>`
       ).join("");
       document.getElementById("scenario-status").textContent = "";
@@ -391,13 +391,13 @@
     document.querySelectorAll(".scenario-choice").forEach((choice) => { choice.disabled = true; });
     items.forEach((item) => {
       item.classList.remove("done");
-      item.querySelector(".step-state").textContent = "Pendiente";
+      item.querySelector(".step-state").textContent = "Pending";
     });
     status.textContent = "";
     items.forEach((item, i) => {
       setTimeout(() => {
         item.classList.add("done");
-        item.querySelector(".step-state").textContent = "Completado";
+        item.querySelector(".step-state").textContent = "Done";
         if (i === items.length - 1) {
           status.textContent = scenario.outcome;
           button.disabled = false;
@@ -410,9 +410,9 @@
   function renderNotFound(message) {
     view.innerHTML = `
       <div class="card empty">
-        <h1>Página no encontrada</h1>
-        <p>${esc(message || "La dirección que buscas no existe.")}</p>
-        <a class="button" href="#/">Volver al inicio</a>
+        <h1>Page not found</h1>
+        <p>${esc(message || "The address you are looking for does not exist.")}</p>
+        <a class="button" href="#/">Back to home</a>
       </div>`;
   }
 
@@ -425,12 +425,12 @@
     window.scrollTo(0, 0);
 
     if (parts.length === 0) return renderHome();
-    if (parts[0] === "catalogo") return renderCatalog(params);
-    if (parts[0] === "producto" && parts[1]) return renderProduct(decodeURIComponent(parts[1]));
-    if (parts[0] === "carrito") return renderCart();
+    if (parts[0] === "catalog") return renderCatalog(params);
+    if (parts[0] === "product" && parts[1]) return renderProduct(decodeURIComponent(parts[1]));
+    if (parts[0] === "cart") return renderCart();
     if (parts[0] === "checkout") return renderCheckout();
-    if (parts[0] === "pedido" && parts[1]) return renderOrder(decodeURIComponent(parts[1]));
-    if (parts[0] === "seguridad") return renderSecurity();
+    if (parts[0] === "order" && parts[1]) return renderOrder(decodeURIComponent(parts[1]));
+    if (parts[0] === "security") return renderSecurity();
     return renderNotFound();
   }
 

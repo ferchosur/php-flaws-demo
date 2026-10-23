@@ -1,4 +1,4 @@
-# PHP Flaws Demo — Mercado Norte
+# PHP Flaws Demo — Worst Market
 
 Reusable demo to showcase CVE-2026-109618 and CVE-2026-109619 in a fictional store. The commercial experience is static HTML/JS. The default profile does not include PHP; on VM (EC2, Azure VM, Compute Engine) and Kubernetes (EKS, AKS, GKE) you can explicitly enable a pre-patch PHP runtime for the lab, isolated with a seccomp jail. No profile contains exploitation payloads. The serverless container tier (ECS Fargate, Container Apps, Cloud Run) always stays on safe simulation.
 

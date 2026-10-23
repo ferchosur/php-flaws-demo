@@ -1,4 +1,4 @@
-# Local cluster (kind) — Mercado Norte PHP Flaws Demo
+# Local cluster (kind) — Worst Market PHP Flaws Demo
 
 Scenario to run the demo on a **local Kubernetes cluster** on top of Docker, with no
 cloud infrastructure. Intended for testing the CVE-2026-109618 / CVE-2026-109619
