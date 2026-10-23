@@ -1,4 +1,4 @@
-# Límites de namespace: evita que un pod comprometido consuma el clúster.
+# Namespace limits: prevent a compromised pod from consuming the cluster.
 apiVersion: v1
 kind: ResourceQuota
 metadata:
@@ -9,7 +9,7 @@ metadata:
     app: php-flaws-demo
 spec:
   hard:
-    # Margen para rolling update con replicas=5 (5 activos + surge).
+    # Headroom for rolling update with replicas=5 (5 active + surge).
     pods: "10"
     requests.cpu: "1"
     requests.memory: 1Gi

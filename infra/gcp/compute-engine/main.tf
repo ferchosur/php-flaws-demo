@@ -1,12 +1,12 @@
 resource "google_service_account" "vm" {
   account_id   = "${var.name_prefix}-vm"
   display_name = "${var.name_prefix}-vm"
-  description  = "Identidad de la VM, solo lectura del repositorio. created_by: ${var.owner}"
+  description  = "VM identity, repository read-only. created_by: ${var.owner}"
 
   depends_on = [google_project_service.api]
 }
 
-# Reader a nivel de repositorio únicamente (sin roles de proyecto).
+# Repository-level reader only (no project roles).
 resource "google_artifact_registry_repository_iam_member" "vm_reader" {
   project    = var.project_id
   location   = google_artifact_registry_repository.app.location
@@ -35,7 +35,7 @@ resource "google_compute_instance" "vm" {
   network_interface {
     subnetwork = google_compute_subnetwork.subnet.id
 
-    # IP pública estable: la URL de la demo no cambia al reemplazar la instancia.
+    # Stable public IP: the demo URL does not change when the instance is replaced.
     access_config {
       nat_ip = google_compute_address.app.address
     }
@@ -54,9 +54,9 @@ resource "google_compute_instance" "vm" {
     gce-container-declaration = templatefile("${path.module}/container-declaration.yaml.tftpl", { image = var.image })
   }
 
-  # Alcances mínimos: lectura de registro (almacenamiento) y escritura de
-  # logs/métricas. Los permisos reales los limita la SA (reader del repo).
-  # Si el pull fallara por alcance, cambiar a cloud-platform.
+  # Minimal scopes: registry read (storage) and write of
+  # logs/metrics. Actual permissions are limited by the SA (repo reader).
+  # If the pull fails due to scope, switch to cloud-platform.
   service_account {
     email = google_service_account.vm.email
     scopes = [

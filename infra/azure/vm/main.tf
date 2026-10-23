@@ -20,7 +20,7 @@ resource "azurerm_subnet" "vm" {
   address_prefixes     = ["10.43.1.0/24"]
 }
 
-# NSG asociado solo a la NIC (consistente en todo el stack). Sin regla para 22.
+# NSG attached only to the NIC (consistent across the stack). No rule for 22.
 resource "azurerm_network_security_group" "vm" {
   name                = "${var.name_prefix}-nsg"
   resource_group_name = azurerm_resource_group.main.name
@@ -116,8 +116,8 @@ resource "azurerm_network_interface_security_group_association" "vm" {
   network_security_group_id = azurerm_network_security_group.vm.id
 }
 
-# Excepción documentada: la VM necesita una identidad para hacer pull desde ACR.
-# Solo tiene AcrPull sobre el registro.
+# Documented exception: the VM needs an identity to pull from ACR.
+# It only has AcrPull on the registry.
 resource "azurerm_user_assigned_identity" "pull" {
   name                = "${var.name_prefix}-pull"
   resource_group_name = azurerm_resource_group.main.name
@@ -131,11 +131,11 @@ resource "azurerm_role_assignment" "pull" {
   principal_id         = azurerm_user_assigned_identity.pull.principal_id
 }
 
-# DESVIACIÓN: azurerm exige una clave SSH. Si no se aporta una, Terraform genera
-# una; la clave privada queda SOLO en el state (no se expone en outputs), por lo
-# que el state debe protegerse. No hay regla NSG para 22: acceso solo por redeploy.
+# DEVIATION: azurerm requires an SSH key. If none is provided, Terraform generates
+# one; the private key stays ONLY in state (not exposed in outputs), so
+# state must be protected. No NSG rule for 22: access only via redeploy.
 variable "admin_ssh_public_key" {
-  description = "Clave pública SSH opcional. Vacío: Terraform genera una y la privada queda en el state."
+  description = "Optional SSH public key. Empty: Terraform generates one and the private key stays in state."
   type        = string
   default     = ""
 }
@@ -149,7 +149,7 @@ locals {
   admin_public_key = var.admin_ssh_public_key != "" ? var.admin_ssh_public_key : tls_private_key.admin[0].public_key_openssh
 }
 
-# Sin VM mientras image esté vacío (bootstrap del registro).
+# No VM while image is empty (registry bootstrap).
 resource "azurerm_linux_virtual_machine" "vm" {
   count                           = var.image == "" ? 0 : 1
   name                            = "${var.name_prefix}-vm"

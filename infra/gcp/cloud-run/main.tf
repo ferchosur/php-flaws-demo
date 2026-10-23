@@ -1,15 +1,15 @@
-# Cloud Run: único punto público intencional = allUsers run.invoker.
+# Cloud Run: only intentional public point = allUsers run.invoker.
 # Egreso residual: Cloud Run tiene salida a internet por defecto (sin VPC
-# connector); un contenedor comprometido podría salir a internet.
+# connector); a compromised container could reach the internet.
 resource "google_service_account" "run" {
   account_id   = "${var.name_prefix}-run"
   display_name = "${var.name_prefix}-run"
-  description  = "Identidad sin roles del servicio Cloud Run. created_by: ${var.owner}"
+  description  = "Role-less identity for the Cloud Run service. created_by: ${var.owner}"
 
   depends_on = [google_project_service.api]
 }
 
-# El service agent de Cloud Run necesita leer imágenes del repositorio.
+# The Cloud Run service agent needs to read images from the repository.
 resource "google_artifact_registry_repository_iam_member" "run_agent_reader" {
   project    = var.project_id
   location   = google_artifact_registry_repository.app.location

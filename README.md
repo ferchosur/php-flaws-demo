@@ -1,157 +1,195 @@
 # PHP Flaws Demo — Mercado Norte
 
-Demo reutilizable para presentar CVE-2026-109618 y CVE-2026-109619 en una tienda ficticia. La experiencia comercial es HTML/JS estático. El perfil predeterminado no incluye PHP; en VM (EC2, Azure VM, Compute Engine) y Kubernetes (EKS, AKS, GKE) se puede activar de forma explícita un runtime PHP previo al parche para el laboratorio, aislado con una jaula seccomp. Ningún perfil contiene payloads de explotación. El nivel serverless de contenedores (ECS Fargate, Container Apps, Cloud Run) se queda siempre en simulación segura.
+Reusable demo to showcase CVE-2026-109618 and CVE-2026-109619 in a fictional store. The commercial experience is static HTML/JS. The default profile does not include PHP; on VM (EC2, Azure VM, Compute Engine) and Kubernetes (EKS, AKS, GKE) you can explicitly enable a pre-patch PHP runtime for the lab, isolated with a seccomp jail. No profile contains exploitation payloads. The serverless container tier (ECS Fargate, Container Apps, Cloud Run) always stays on safe simulation.
 
-## Qué incluye
+## What's included
 
-| Parte | Ruta | Descripción |
+| Part | Path | Description |
 |---|---|---|
-| Tienda | `web/` | HTML, CSS y JS estáticos sin dependencias ni CDN. Catálogo, carrito, checkout simulado y página de demo de seguridad. El recibo guarda solo el código, productos y total; no persiste nombre, correo ni dirección. |
-| Imagen segura | `app/Dockerfile` | nginx sin privilegios, sin módulos de script, sin shell tras el build. Predeterminada para todas las nubes y plataformas. |
-| Runtime vulnerable | `app/Dockerfile-vulnerable`, `app/vulnerable/` | Perfil optativo PHP 8.5.11 para VM y Kubernetes, previo a la versión corregida 8.5.12. El recorrido de interfaz no envía exploits; el runtime sí procesa HTTP. |
-| Jaula seccomp | `app/seccomp-vulnerable.json` | Lista de denegación de syscalls de escape (ptrace, mount, namespaces, carga de módulos, kexec, bpf) aplicada al runtime vulnerable en VM. Sin privilegios: conserva UID 101 y `cap-drop ALL`. |
-| Runtime "prod descuidado" | `app/Dockerfile-vulnerable-baseline` | Perfil vulnerable SIN endurecer (root, shell, `curl`/`nc`, sin `disable_functions`, sin seccomp) para contrastar con el endurecido. Solo clúster local / labs aislados; `deploy.py` lo bloquea en la nube. |
-| Clúster local | `local-cluster/` | Escenario kind (Kubernetes local sobre Docker) con prerequisitos, recursos y manifiestos. Ver [local-cluster/README.md](local-cluster/README.md). |
-| Menú | `deploy.py` | Menú interactivo (stdlib de Python 3.11+): configura, prueba en local, planifica, despliega y destruye. |
-| Infraestructura | `infra/<nube>/<plataforma>/` | Nueve raíces de Terraform con el mismo contrato de variables. |
-| Kubernetes | `k8s/` | Manifiestos del namespace, con Pod Security `restricted` y red por defecto denegada. |
+| Store | `web/` | Static HTML, CSS and JS with no dependencies or CDN. Catalog, cart, simulated checkout and a security demo page. The receipt stores only the code, products and total; it does not persist name, email or address. |
+| Secure image | `app/Dockerfile` | Unprivileged nginx, no scripting modules, no shell after the build. Default for every cloud and platform. |
+| Vulnerable runtime | `app/Dockerfile-vulnerable`, `app/vulnerable/` | Optional PHP 8.5.11 profile for VM and Kubernetes, prior to the fixed version 8.5.12. The UI walkthrough sends no exploits; the runtime does process HTTP. |
+| Seccomp jail | `app/seccomp-vulnerable.json` | Deny-list of escape syscalls (ptrace, mount, namespaces, module loading, kexec, bpf) applied to the vulnerable runtime on VM. Unprivileged: keeps UID 101 and `cap-drop ALL`. |
+| "Careless prod" runtime | `app/Dockerfile-vulnerable-baseline` | Vulnerable profile with NO hardening (root, shell, `curl`/`nc`, no `disable_functions`, no seccomp) to contrast with the hardened one. Local cluster / isolated labs only; `deploy.py` blocks it in the cloud. |
+| Local cluster | `local-cluster/` | kind scenario (local Kubernetes on Docker) with prerequisites, resources and manifests. See [local-cluster/README.md](local-cluster/README.md). |
+| Menu | `deploy.py` | Interactive menu (Python 3.11+ stdlib): configure, test locally, plan, deploy and destroy. |
+| Infrastructure | `infra/<cloud>/<platform>/` | Nine Terraform roots sharing the same variable contract. |
+| Kubernetes | `k8s/` | Namespace manifests, with Pod Security `restricted` and default-deny networking. |
 
-## Uso rápido
+## Deployment options
+
+There are **four ways** to run the demo, from lowest to highest fidelity. All use the same content (`web/`) and, except the static preview, the same image built from `app/`.
+
+| # | Option | For | Requirements | Profiles | Command |
+|---|---|---|---|---|---|
+| 1 | Static preview | See the store (HTML/JS), no backend | Python | — (static only) | `python -m http.server 8000 -d web` |
+| 2 | Single Docker container | Quick image test | Docker | all three | `python deploy.py local` |
+| 3 | Local kind cluster | Reproduce K8s on your machine (ideal for exploit testing) | Docker, kind, kubectl | all three | `python deploy.py local-cluster` |
+| 4 | Cloud (AWS/Azure/GCP) | Real public environment (VM, Kubernetes or serverless) | Authenticated cloud CLI, Terraform, Docker | safe · hardened vulnerable | `python deploy.py` → configure → deploy |
+
+`python deploy.py` (no arguments) opens the interactive menu with every action; direct subcommands also exist: `configure`, `local`, `local-cluster`, `local-cluster-down`, `plan`, `deploy`, `destroy`. `deployment.json` stores the configuration (no secrets).
+
+### Runtime profiles
+
+Chosen during **Configure** (step 2a), available in options 2, 3 and 4 (in option 4, VM and Kubernetes only):
+
+| Profile | What it is | Where it's allowed |
+|---|---|---|
+| `safe-simulation` | Static nginx, no PHP. **Default.** | Every option and platform |
+| `vulnerable-php` | Pre-patch PHP 8.5.11, **hardened**: non-root, `cap-drop ALL`, read-only fs, no shell, `disable_functions`, seccomp / `RuntimeDefault`, no cloud identity. | VM, Kubernetes and local cluster (double confirmation in cloud) |
+| `vulnerable-baseline` | Pre-patch PHP 8.5.11, **"careless prod"**: root, shell, `curl`/`nc`, no `disable_functions`, no seccomp, open egress. | **Only** local cluster / `local`; `deploy.py` **blocks** it in the cloud |
+
+No profile includes exploitation payloads: the UI walkthrough does not attack, and the vulnerable runtime only processes HTTP.
+
+### 1. Static preview
+
+Just the store, no image or backend. Does not apply nginx headers or hardening.
 
 ```sh
-python deploy.py                   # menú principal
-python deploy.py local             # un contenedor en Docker (prueba rápida)
-python deploy.py local-cluster     # clúster Kubernetes local con kind (ver local-cluster/)
-python deploy.py local-cluster-down
+python -m http.server 8000 -d web   # http://localhost:8000
 ```
 
-Sin Docker, la tienda puede previsualizarse con `python -m http.server 8000 -d web`. Esa vista no aplica las cabeceras ni el endurecimiento de nginx.
+### 2. Single Docker container
 
-### Menú
+One container via `docker run`, with the same hardening as the cloud.
 
-1. **Configurar**: nube (AWS, Azure, GCP), infraestructura, región, prefijo, responsable (`created_by`), fecha de caducidad, tamaño, réplicas, presupuesto, correo de alertas, proyecto (GCP) y, en Kubernetes, la IP del operador para el API. VM y Kubernetes permiten elegir el perfil del runtime: simulación segura, vulnerable endurecido (seccomp) o vulnerable "prod descuidado".
-2. **Ver configuración**.
-3. **Probar en local** con Docker (un contenedor).
-4. **Planificar** (`terraform plan`, sin cambios).
-5. **Desplegar**: pide escribir el prefijo para confirmar.
-6. **Destruir**: pide confirmación igual.
-7. **Clúster local con kind (levantar)**: Kubernetes local sobre Docker. Ver [local-cluster/README.md](local-cluster/README.md).
-8. **Clúster local con kind (borrar)**.
+```sh
+python deploy.py configure   # choose cloud/platform and, in 2a, the runtime profile
+python deploy.py local       # builds the profile's image and runs it
+# http://localhost:8080   — stop: docker rm -f php-flaws-demo-local
+```
 
-El perfil "prod descuidado" (sin endurecer) está pensado para el clúster local; `deploy.py` lo **bloquea** en el despliegue a la nube.
+The hardened profile attaches the container to an internal Docker network (no egress) and applies the seccomp jail; "careless prod" runs as root with open egress.
 
-`deployment.json` guarda la configuración y no contiene secretos.
+### 3. Local kind cluster
 
-### Infraestructura disponible
+Local Kubernetes on Docker — the **recommended option for exploit testing**. Prerequisites, resources and details in **[local-cluster/README.md](local-cluster/README.md)**.
 
-| Nube | Serverless contenedor | Máquina virtual | Kubernetes |
+```sh
+python deploy.py configure           # in 2a choose the profile (e.g. vulnerable-baseline)
+python deploy.py local-cluster       # builds, creates the kind cluster and deploys
+# http://localhost:8080
+python deploy.py local-cluster-down  # deletes the cluster when done
+```
+
+Requires `kind` (if missing, `deploy.py` prints the install command) and `kubectl`. Note: kind's CNI (kindnet) does not enforce NetworkPolicy, so the hardened profile's egress-deny is not reproduced locally.
+
+### 4. Cloud deployment
+
+Real public environment. Platform matrix:
+
+| Cloud | Serverless container | Virtual machine | Kubernetes |
 |---|---|---|---|
 | AWS | ECS Fargate + ALB | EC2 (cloud-init) | EKS |
 | Azure | Container Apps | Virtual Machine (cloud-init) | AKS |
 | GCP | Cloud Run | Compute Engine (COS) | GKE |
 
-No se ofrecen Lambda, Azure Functions ni Cloud Functions. Un sitio que sirve HTML y muchos recursos estáticos se ajusta mejor a contenedores serverless, que cumplen el mismo rol de "función" sin el manejo de paquetes.
+Lambda, Azure Functions and Cloud Functions are not offered: a site serving HTML and static assets fits better in serverless containers, which fill the "function" role without the packaging overhead. The vulnerable profile is VM- and Kubernetes-only; serverless stays on safe simulation.
 
-### Flujo de despliegue
+**Step by step:**
 
-1. Crea `labs/<YYYY-MM>-<prefijo>/` con `INVENTARIO.md` antes de crear recursos.
-2. Terraform crea solo el registro privado (`-target`).
-3. Construye la imagen con `app/Dockerfile` y la publica con un tag por marca de tiempo (inmutable en la práctica).
-4. Terraform aplica la infraestructura completa con esa imagen.
-5. En Kubernetes, `kubectl apply` de los manifiestos renderizados en `build/k8s/`.
-6. Actualiza `INVENTARIO.md` con los recursos del estado de Terraform.
+1. **Authenticate to the cloud** and have the tools (`terraform`, `docker`, and `aws`/`az`/`gcloud` with an active session).
+   - AWS: `aws sso login` (or your flow). If Terraform doesn't pick up credentials from an SSO/role session, export them in the same shell: `eval "$(aws configure export-credentials --format env)"`.
+2. **Configure** — `python deploy.py configure`: cloud, platform, region, prefix, owner (`created_by`), expiry, size, replicas, budget, alert email, project (GCP) and, on Kubernetes, your public IP for the API. On VM/K8s you choose the runtime profile (step 2a).
+3. **Plan** (optional, creates nothing) — `python deploy.py plan`.
+4. **Deploy** — `python deploy.py deploy`: prompts you to type the prefix to confirm; the vulnerable profile also prompts you to type `DEPLOY-VULNERABLE`. Internally:
+   1. Creates `labs/<YYYY-MM>-<prefix>/` with `INVENTARIO.md`.
+   2. Terraform creates only the private registry (`-target`).
+   3. Builds the profile's image and publishes it with a timestamp tag (effectively immutable).
+   4. Terraform applies the full infrastructure with that image.
+   5. On Kubernetes, `kubectl apply` of the manifests rendered into `build/k8s/`.
+   6. Prints the public URL and updates `INVENTARIO.md`.
+5. **Destroy** — `python deploy.py destroy` (prompts for the prefix): deletes the LoadBalancer Service first, then `terraform destroy`.
 
-El perfil PHP vulnerable se ofrece en VM (EC2, Azure VM, Compute Engine) y Kubernetes (EKS, AKS, GKE). El workload es público y HTTP; el modo vulnerable requiere escribir `DEPLOY-VULNERABLE` además de la confirmación normal. El contenedor ejecuta como UID 101, sin capacidades, con raíz de solo lectura, sin shell, funciones PHP de comandos desactivadas y sin identidad cloud. El aislamiento adicional depende de la plataforma:
+**Vulnerable-profile isolation in the cloud** (platform-dependent):
 
-- **VM (EC2, Azure VM):** jaula seccomp `app/seccomp-vulnerable.json`. Deniega los primitivos de kernel de escape y movimiento lateral (`ptrace`, `mount`/`umount2`, `pivot_root`, `chroot`, `setns`, `unshare`, carga de módulos, `kexec`, `bpf`, `perf_event_open`). `execve` queda permitido a la fuerza —el runtime lo necesita para arrancar `php`—, así que la ejecución de comandos se bloquea en la capa PHP (`disable_functions`) y porque la imagen no tiene shell ni ningún otro binario que lanzar. Egreso restringido por NSG/firewall a 443 y DNS. Compute Engine (COS/konlet) no permite un perfil seccomp personalizado por declaración de contenedor (ver residuales).
-- **Kubernetes (EKS, AKS, GKE):** `seccompProfile: RuntimeDefault`, NetworkPolicy de denegación por defecto (solo ingreso HTTP y egreso DNS), sin token de ServiceAccount y sin identidad de workload. Los tres clústeres aplican NetworkPolicy (GKE Calico, AKS `azure`, EKS VPC CNI con `enableNetworkPolicy`).
+- **VM (EC2, Azure VM):** seccomp jail `app/seccomp-vulnerable.json`. Denies the kernel escape / lateral-movement primitives (`ptrace`, `mount`/`umount2`, `pivot_root`, `chroot`, `setns`, `unshare`, module loading, `kexec`, `bpf`, `perf_event_open`). `execve` is necessarily left allowed — the runtime needs it to launch `php` — so command execution is blocked at the PHP layer (`disable_functions`) and because the image has no shell or any other binary to launch. Egress restricted by NSG/firewall to 443 and DNS. Compute Engine (COS/konlet) does not allow a custom seccomp profile via container declaration (see residuals).
+- **Kubernetes (EKS, AKS, GKE):** `seccompProfile: RuntimeDefault`, default-deny NetworkPolicy (HTTP ingress and DNS egress only), no ServiceAccount token and no workload identity. All three clusters enforce NetworkPolicy (GKE Calico, AKS `azure`, EKS VPC CNI with `enableNetworkPolicy`).
 
-**No se usa `chroot(2)`**: exigiría `CAP_SYS_CHROOT` o root al arrancar, lo que rompería el modelo sin privilegios. La jaula seccomp contiene esta clase de fallo (corrupción de memoria → posible ejecución en proceso) denegando los syscalls de escape del contenedor, mientras que `disable_functions` y la ausencia de shell impiden la ejecución de comandos. No se puede denegar `execve` por seccomp: es el syscall con el que el runtime lanza el propio `php`, y denegarlo impide que el contenedor arranque. Este aislamiento reduce el radio de impacto; no hace segura una versión vulnerable ni garantiza ausencia de escape.
+**`chroot(2)` is not used**: it would require `CAP_SYS_CHROOT` or root at startup, breaking the unprivileged model. The seccomp jail contains this class of bug (memory corruption → possible in-process execution) by denying the container's escape syscalls, while `disable_functions` and the absence of a shell prevent command execution. `execve` cannot be denied via seccomp: it is the syscall the runtime uses to launch `php` itself, and denying it stops the container from starting. This isolation reduces blast radius; it does not make a vulnerable version safe nor guarantee there is no escape.
 
-Para ejecutarlo localmente, configura una plataforma VM o Kubernetes → perfil PHP vulnerable y elige `local`. Docker publica el puerto solo en `127.0.0.1`, conecta el contenedor a una red interna sin salida a internet y aplica la misma jaula seccomp (`--security-opt seccomp=app/seccomp-vulnerable.json`).
+## Security controls
 
-## Controles de seguridad
+The goal is that if someone exploits the application, they have no way to run system commands or move toward other resources.
 
-El objetivo es que, si alguien explota la aplicación, no tenga manera de ejecutar comandos del sistema ni de moverse hacia otros recursos.
-
-| Control | Dónde |
+| Control | Where |
 |---|---|
-| Perfil estático sin PHP/FastCGI; perfil vulnerable PHP separado y optativo | `app/nginx.conf`, `app/Dockerfile-vulnerable` |
-| Jaula seccomp en el runtime vulnerable en VM (syscalls de escape denegadas; comandos bloqueados por `disable_functions` + sin shell); `RuntimeDefault` en Kubernetes | `app/seccomp-vulnerable.json`, cloud-init de EC2/Azure VM, `k8s/20-deployment.yaml` |
-| Usuario 101, sin root, `--cap-drop ALL`, `no-new-privileges` | `app/Dockerfile`, manifiestos, todas las plataformas |
-| Sin `/bin/sh`, `apk`, `wget` ni `curl` en la imagen final | `app/Dockerfile` |
-| Raíz de solo lectura; solo `/tmp` escribible | Todas las plataformas (ver excepciones) |
-| Sin identidad del workload; solo la identidad de pull, limitada al repositorio | Todas las raíces |
-| Sin SSH, sin llaves en la imagen, sin secretos en variables de entorno | Todas |
-| Ingreso solo HTTP público al punto de entrada | Todas |
-| Egreso restringido: ECS sin NAT con endpoints privados; VM con NSG/firewall solo 443 y DNS; K8s con NetworkPolicy | Ver tabla de residuales |
-| IMDSv2 obligatorio con hop limit 1 | EC2, nodos EKS |
-| Pod Security `restricted`, sin token de service account, cuotas y LimitRange | `k8s/` |
-| Etiquetas `created_by`, `expires_at`, `app`, `managed_by` en todos los recursos | `locals.tf` / `labels` |
+| Static profile with no PHP/FastCGI; separate, optional vulnerable PHP profile | `app/nginx.conf`, `app/Dockerfile-vulnerable` |
+| Seccomp jail on the vulnerable runtime on VM (escape syscalls denied; commands blocked by `disable_functions` + no shell); `RuntimeDefault` on Kubernetes | `app/seccomp-vulnerable.json`, EC2/Azure VM cloud-init, `k8s/20-deployment.yaml` |
+| User 101, non-root, `--cap-drop ALL`, `no-new-privileges` | `app/Dockerfile`, manifests, all platforms |
+| No `/bin/sh`, `apk`, `wget` or `curl` in the final image | `app/Dockerfile` |
+| Read-only root; only `/tmp` writable | All platforms (see exceptions) |
+| No workload identity; only the pull identity, scoped to the repository | All roots |
+| No SSH, no keys in the image, no secrets in environment variables | All |
+| Public HTTP ingress to the entry point only | All |
+| Restricted egress: ECS with no NAT and private endpoints; VM with NSG/firewall only 443 and DNS; K8s with NetworkPolicy | See residuals table |
+| IMDSv2 required with hop limit 1 | EC2, EKS nodes |
+| Pod Security `restricted`, no service account token, quotas and LimitRange | `k8s/` |
+| `created_by`, `expires_at`, `app`, `managed_by` labels on every resource | `locals.tf` / `labels` |
 
-### Riesgos residuales (no mitigados por completo)
+### Residual risks (not fully mitigated)
 
-| Plataforma | Residual |
+| Platform | Residual |
 |---|---|
-| Cloud Run | Egreso a internet por defecto (sin conector VPC). |
-| Container Apps | Sin VNet, egreso libre. Sin sistema de archivos de solo lectura (no soportado). |
-| AKS / GKE / EKS | Los nodos tienen salida (AKS: sin NAT; EKS: un NAT gateway; GKE: sin NAT, solo Google APIs). |
-| EKS | `AmazonEC2ContainerRegistryReadOnly` puede leer todos los repositorios de la cuenta. El Service `LoadBalancer` requiere instalar el AWS Load Balancer Controller, que esta raíz no instala. |
-| EC2 | El rol de instancia puede llamar `GetAuthorizationToken` en `*`. La IP pública es estable (Elastic IP); una EIP sin asociar factura si la instancia se destruye sin liberar la EIP. |
-| VM (Azure, GCP, EC2) | HTTP sin TLS. Azure VM genera una clave SSH en el estado si no se proporciona una. IP pública estable en las tres (EC2 Elastic IP, Azure IP estática Standard, GCP dirección reservada). |
-| GCP Compute | Puerto 8080 en vez de 80, porque konlet usa `--network=host`. Sin `readOnlyRootFilesystem`; `/tmp` y `/var/cache/nginx` son tmpfs en memoria. **Konlet no aplica la jaula seccomp personalizada**: el runtime vulnerable en Compute Engine se apoya en el perfil por defecto de COS, `disable_functions`, la ausencia de shell y el firewall de egreso. Para seccomp estricto, usa EC2/Azure VM o Kubernetes. |
-| Registro | ACR y ECR/Artifact Registry sin escaneo de vulnerabilidades ni inmutabilidad de tags en GCP. |
-| Presupuesto | Azure usa una fecha de inicio fija (`2026-10-01`) que hay que actualizar. GCP no envía correo (requiere canal de notificaciones). |
+| Cloud Run | Egress to the internet by default (no VPC connector). |
+| Container Apps | No VNet, free egress. No read-only filesystem (unsupported). |
+| AKS / GKE / EKS | Nodes have egress (AKS: no NAT; EKS: one NAT gateway; GKE: no NAT, Google APIs only). |
+| EKS | `AmazonEC2ContainerRegistryReadOnly` can read every repository in the account. The `LoadBalancer` Service requires installing the AWS Load Balancer Controller, which this root does not install. |
+| EC2 | The instance role can call `GetAuthorizationToken` on `*`. The public IP is stable (Elastic IP); an unassociated EIP bills if the instance is destroyed without releasing the EIP. |
+| VM (Azure, GCP, EC2) | HTTP without TLS. Azure VM generates an SSH key into state if one isn't provided. Stable public IP on all three (EC2 Elastic IP, Azure Static Standard IP, GCP reserved address). |
+| GCP Compute | Port 8080 instead of 80, because konlet uses `--network=host`. No `readOnlyRootFilesystem`; `/tmp` and `/var/cache/nginx` are in-memory tmpfs. **Konlet does not apply the custom seccomp jail**: the vulnerable runtime on Compute Engine relies on COS's default profile, `disable_functions`, the absence of a shell and the egress firewall. For strict seccomp, use EC2/Azure VM or Kubernetes. |
+| Registry | ACR and ECR/Artifact Registry without vulnerability scanning or tag immutability on GCP. |
+| Budget | Azure uses a fixed start date (`2026-10-01`) that must be updated. GCP sends no email (requires a notification channel). |
 
-Estas medidas reducen el radio de impacto. No sustituyen parches, no garantizan que una carga comprometida no cause daño y no protegen contra abuso del propio plano de control de la nube.
+These measures reduce blast radius. They do not replace patches, do not guarantee that a compromised workload causes no harm, and do not protect against abuse of the cloud control plane itself.
 
-En EKS, la raíz habilita explícitamente `enableNetworkPolicy` en el addon VPC CNI; sin esa opción, las políticas Kubernetes no aplican el aislamiento esperado. Consulta la [documentación de AWS para habilitar NetworkPolicy en EKS](https://docs.aws.amazon.com/eks/latest/userguide/cni-network-policy-configure.html).
+On EKS, the root explicitly enables `enableNetworkPolicy` on the VPC CNI addon; without that option, Kubernetes policies do not enforce the expected isolation. See the [AWS documentation for enabling NetworkPolicy on EKS](https://docs.aws.amazon.com/eks/latest/userguide/cni-network-policy-configure.html).
 
-## Estado de verificación
+## Verification status
 
-| Elemento | Verificado | No verificado |
+| Item | Verified | Not verified |
 |---|---|---|
-| `deploy.py` | `py_compile`; sintaxis del asistente y acciones locales. | Flujo de despliegue real, `plan` y `apply` contra cuentas. |
-| `web/` | Sintaxis JS válida con `node --check`. | Pruebas en navegador. |
-| Imagen segura (`app/Dockerfile`) | — | No construida en esta sesión. |
-| Jaula seccomp | JSON válido; contenedor vulnerable probado en local con el perfil (`/healthz` 200, sin shell, arranca correctamente). | Enforcement real de los syscalls denegados; wiring en cloud-init de VM (solo se verifica al arrancar la VM). |
-| Imagen vulnerable | `docker build` de `Dockerfile-vulnerable` OK; corregido el orden `chown`/`rm busybox` que rompía el build. | — |
-| Terraform (9 raíces) | `fmt` y `validate` pasan en todas (incl. EC2/Azure VM/GCP Compute con IP estable y seccomp). | `plan`/`apply` real; comportamiento de providers y de cloud-init. |
-| `k8s/` | — | `kubectl apply --dry-run` contra clúster real. |
+| `deploy.py` | `py_compile`; wizard syntax and local actions. | Real deployment flow, `plan` and `apply` against accounts. |
+| `web/` | Valid JS syntax with `node --check`. | Browser testing. |
+| Secure image (`app/Dockerfile`) | — | Not built in this session. |
+| Seccomp jail | Valid JSON; vulnerable container tested locally with the profile (`/healthz` 200, no shell, starts correctly). | Real enforcement of the denied syscalls; VM cloud-init wiring (only verified when the VM boots). |
+| Vulnerable image | `docker build` of `Dockerfile-vulnerable` OK; fixed the `chown`/`rm busybox` ordering that broke the build. | — |
+| Terraform (9 roots) | `fmt` and `validate` pass on all (incl. EC2/Azure VM/GCP Compute with stable IP and seccomp). | Real `plan`/`apply`; provider and cloud-init behavior. |
+| `k8s/` | — | `kubectl apply --dry-run` against a real cluster. |
 
-Antes de un despliegue real:
+Before a real deployment:
 
 ```sh
 docker build -f app/Dockerfile -t php-flaws-demo:local .
 docker run --rm -p 8080:8080 --read-only --tmpfs /tmp --user 101:101 --cap-drop ALL php-flaws-demo:local
-docker run --rm --read-only --user 101:101 --entrypoint /bin/sh php-flaws-demo:local -c id   # debe fallar
+docker run --rm --read-only --user 101:101 --entrypoint /bin/sh php-flaws-demo:local -c id   # must fail
 ```
 
-Fijar la imagen base por digest:
+Pin the base image by digest:
 
 ```sh
 docker buildx imagetools inspect nginxinc/nginx-unprivileged:1.27-alpine
 ```
 
-## Reglas de laboratorio
+## Lab rules
 
-Cada despliegue es un laboratorio: `labs/<YYYY-MM>-<prefijo>/` con `INVENTARIO.md`, etiquetas `created_by` en todos los recursos (GCP en minúsculas) y limpieza con `python deploy.py destroy`. Verifica al cerrar que no queden recursos etiquetados:
+Every deployment is a lab: `labs/<YYYY-MM>-<prefix>/` with `INVENTARIO.md`, `created_by` labels on every resource (lowercase on GCP) and cleanup with `python deploy.py destroy`. On teardown, verify no tagged resources remain:
 
 - AWS: `aws resourcegroupstaggingapi get-resources --tag-filters Key=created_by,Values=<owner>`
 - Azure: `az resource list --tag created_by=<owner>`
-- GCP: `gcloud asset search-all-resources --scope=projects/<P> --query="labels.created_by=<owner-minúsculas>"`
+- GCP: `gcloud asset search-all-resources --scope=projects/<P> --query="labels.created_by=<owner-lowercase>"`
 
-## Fuentes
+## Sources
 
-- [PHP: Security advisory, 21 Oct 2026](https://www.php.net/archive/2026.php): CVE-2026-109618 (corrupción por falta de memoria) y CVE-2026-109619 (estado obsoleto tras liberar memoria); versiones corregidas 8.5.12, 8.4.27, 8.3.36 y 8.2.35.
+- [PHP: Security advisory, 21 Oct 2026](https://www.php.net/archive/2026.php): CVE-2026-109618 (out-of-memory corruption) and CVE-2026-109619 (use-after-free / stale state); fixed versions 8.5.12, 8.4.27, 8.3.36 and 8.2.35.
 - [Advisory GHSA-6wmf-4rv5-p3rp](https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp)
 - [Advisory GHSA-w8hw-w9fx-j79w](https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w)
 
-## Proceso sugerido para nuevas demos
+## Suggested process for new demos
 
-1. Validar CVE, versiones afectadas y corregidas en el aviso del fabricante.
-2. Definir el objetivo y clasificar el contenido como simulación, reproducción controlada o detección.
-3. Usar datos sintéticos. Mantener la simulación como opción predeterminada; el perfil previo al parche solo se ofrece en GKE con aislamiento y doble confirmación.
-4. Revisar aislamiento, privilegios, acceso de red, caducidad y costo con una lista común.
-5. Añadir guion comercial, pasos de reinicio/destrucción y propietario del contenido.
-6. Revisar y actualizar el contenido al publicarse nuevos avisos o parches.
+1. Validate the CVE, affected and fixed versions in the vendor advisory.
+2. Define the goal and classify the content as simulation, controlled reproduction or detection.
+3. Use synthetic data. Keep simulation as the default option; the pre-patch profile is offered only on VM and Kubernetes, with isolation and double confirmation.
+4. Review isolation, privileges, network access, expiry and cost against a shared checklist.
+5. Add the commercial script, restart/teardown steps and content owner.
+6. Review and update the content when new advisories or patches are published.

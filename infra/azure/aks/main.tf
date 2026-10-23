@@ -23,10 +23,10 @@ resource "azurerm_subnet" "nodes" {
   address_prefixes     = ["10.44.1.0/24"]
 }
 
-# AKS administra las reglas del LoadBalancer en su propio NSG de nodos; un NSG
-# propio con deny-all en la subred rompería el Service tipo LoadBalancer, por
-# eso no se crea. Residual: los nodos tienen egreso libre (outbound LB por
-# defecto, sin NAT gateway ni Azure Firewall).
+# AKS manages the LoadBalancer rules in its own node NSG; a custom NSG
+# with deny-all on the subnet would break the LoadBalancer Service, so
+# it is not created. Residual: the nodes have free egress (default outbound
+# LB, no NAT gateway or Azure Firewall).
 
 resource "azurerm_kubernetes_cluster" "main" {
   name                              = "${var.name_prefix}-aks"
@@ -70,7 +70,7 @@ resource "azurerm_kubernetes_cluster" "main" {
   lifecycle {
     precondition {
       condition     = length(var.admin_cidrs) > 0
-      error_message = "admin_cidrs es obligatorio en AKS (por ejemplo [\"203.0.113.10/32\"])."
+      error_message = "admin_cidrs is required on AKS (for example [\"203.0.113.10/32\"])."
     }
   }
 }

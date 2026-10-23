@@ -3,7 +3,7 @@ output "kubeconfig_command" {
 }
 
 output "registry_url" {
-  description = "Repositorio de imágenes en ACR."
+  description = "Image repository in ACR."
   value       = "${azurerm_container_registry.app.login_server}/${local.repository}"
 }
 
@@ -12,6 +12,6 @@ output "resource_group" {
 }
 
 output "app_url" {
-  description = "Vacío: la URL se obtiene del Service tras aplicar los manifiestos."
+  description = "Empty: the URL comes from the Service after applying the manifests."
   value       = ""
 }

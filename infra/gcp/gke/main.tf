@@ -1,7 +1,7 @@
 resource "google_service_account" "node" {
   account_id   = "${var.name_prefix}-node"
   display_name = "${var.name_prefix}-node"
-  description  = "Identidad de nodos GKE con roles estandar minimos. created_by: ${var.owner}"
+  description  = "GKE node identity with minimal standard roles. created_by: ${var.owner}"
 
   depends_on = [google_project_service.api]
 }
@@ -18,7 +18,7 @@ resource "google_project_iam_member" "node" {
   member  = "serviceAccount:${google_service_account.node.email}"
 }
 
-# Reader a nivel de repositorio únicamente.
+# Repository-level reader only.
 resource "google_artifact_registry_repository_iam_member" "node_reader" {
   project    = var.project_id
   location   = google_artifact_registry_repository.app.location
@@ -27,8 +27,8 @@ resource "google_artifact_registry_repository_iam_member" "node_reader" {
   member     = "serviceAccount:${google_service_account.node.email}"
 }
 
-# Binary Authorization no se habilita (fuera de alcance de la demo).
-# Cluster zonal en ${region}-a: sin alta disponibilidad del plano de control.
+# Binary Authorization is not enabled (out of scope for the demo).
+# Zonal cluster in ${region}-a: no control-plane high availability.
 resource "google_container_cluster" "main" {
   name        = "${var.name_prefix}-gke"
   location    = local.zone
@@ -78,10 +78,10 @@ resource "google_container_cluster" "main" {
     }
   }
 
-  # GKE_METADATA en el node pool exige el workload pool en el clúster. Se
-  # habilita el pool, pero no se crean bindings KSA->GSA: los pods no obtienen
-  # identidad GCP y el servidor de metadatos de GKE bloquea el token de la SA
-  # del nodo.
+  # GKE_METADATA on the node pool requires the workload pool on the cluster. It
+  # enables the pool, but no KSA->GSA bindings are created: pods get no
+  # GCP identity and the GKE metadata server blocks the node SA's token
+  # from the node.
   workload_identity_config {
     workload_pool = "${var.project_id}.svc.id.goog"
   }
@@ -99,7 +99,7 @@ resource "google_container_cluster" "main" {
   lifecycle {
     precondition {
       condition     = length(var.admin_cidrs) > 0
-      error_message = "admin_cidrs es obligatorio en GKE (IP del operador, x.x.x.x/32)."
+      error_message = "admin_cidrs is required on GKE (operator IP, x.x.x.x/32)."
     }
   }
 
@@ -120,7 +120,7 @@ resource "google_container_node_pool" "default" {
   node_config {
     machine_type    = local.machine_type
     service_account = google_service_account.node.email
-    # Requerido por GKE; el acceso real lo limitan los roles de la SA.
+    # Required by GKE; actual access is limited by the SA's roles.
     oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
     labels          = local.labels
     resource_labels = local.labels

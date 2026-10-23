@@ -1,7 +1,7 @@
-# Denegación por defecto de ingreso y egreso. Solo se permite:
-#   - ingreso HTTP al contenedor web (8080);
-#   - egreso DNS hacia kube-dns.
-# El pod no puede abrir conexiones hacia la red interna ni hacia otros pods.
+# Default-deny for ingress and egress. Only allowed:
+#   - HTTP ingress to the web container (8080);
+#   - DNS egress to kube-dns.
+# The pod cannot open connections to the internal network or to other pods.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

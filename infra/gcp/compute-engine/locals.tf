@@ -10,11 +10,11 @@ locals {
 
   machine_type = { small = "e2-small", medium = "e2-medium" }[var.size]
 
-  # Zona fija -a (decisión de demo: instancia única, sin alta disponibilidad).
+  # Fixed zone -a (demo decision: single instance, no high availability).
   zone    = "${var.region}-a"
   web_tag = "php-flaws-demo-web"
 
-  # El contenedor escucha en 8080. Konlet (COS) ejecuta con --network=host, por
-  # lo que no hay remapeo 80->8080: el puerto público es 8080.
+  # The container listens on 8080. Konlet (COS) runs with --network=host, so
+  # there is no 80->8080 remap: the public port is 8080.
   app_port = 8080
 }

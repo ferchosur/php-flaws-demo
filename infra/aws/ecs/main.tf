@@ -1,6 +1,6 @@
-# ECS Fargate detras de un ALB publico. Tareas en subredes privadas, sin NAT:
-# el pull de imagen y los logs salen por VPC endpoints (ecr.api, ecr.dkr, logs) y S3 gateway.
-# El contenedor no tiene task role; solo el execution role de la plataforma (pull + logs).
+# ECS Fargate behind a public ALB. Tasks in private subnets, no NAT:
+# image pull and logs go out via VPC endpoints (ecr.api, ecr.dkr, logs) and the S3 gateway.
+# The container has no task role; only the platform execution role (pull + logs).
 
 data "aws_availability_zones" "available" {
   state = "available"
@@ -69,25 +69,25 @@ resource "aws_route_table_association" "private" {
 # ---------------------------------------------------------------- Security groups
 resource "aws_security_group" "alb" {
   name        = "${local.name}-alb"
-  description = "ALB publico: HTTP 80 desde Internet"
+  description = "Public ALB: HTTP 80 from the Internet"
   vpc_id      = aws_vpc.main.id
 }
 
 resource "aws_security_group" "task" {
   name        = "${local.name}-task"
-  description = "Tareas Fargate: 8080 solo desde el ALB"
+  description = "Fargate tasks: 8080 from the ALB only"
   vpc_id      = aws_vpc.main.id
 }
 
 resource "aws_security_group" "endpoints" {
   name        = "${local.name}-endpoints"
-  description = "VPC endpoints de interfaz: 443 desde las tareas"
+  description = "Interface VPC endpoints: 443 from the tasks"
   vpc_id      = aws_vpc.main.id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_http" {
   security_group_id = aws_security_group.alb.id
-  description       = "HTTP desde Internet"
+  description       = "HTTP from the Internet"
   ip_protocol       = "tcp"
   from_port         = 80
   to_port           = 80
@@ -105,7 +105,7 @@ resource "aws_vpc_security_group_egress_rule" "alb_to_task" {
 
 resource "aws_vpc_security_group_ingress_rule" "task_from_alb" {
   security_group_id            = aws_security_group.task.id
-  description                  = "8080 desde el ALB"
+  description                  = "8080 from the ALB"
   ip_protocol                  = "tcp"
   from_port                    = 8080
   to_port                      = 8080
@@ -121,10 +121,10 @@ resource "aws_vpc_security_group_egress_rule" "task_to_endpoints" {
   referenced_security_group_id = aws_security_group.endpoints.id
 }
 
-# Las capas de ECR viven en S3: el gateway endpoint se alcanza por prefix list.
+# ECR layers live in S3: the gateway endpoint is reached via prefix list.
 resource "aws_vpc_security_group_egress_rule" "task_to_s3" {
   security_group_id = aws_security_group.task.id
-  description       = "443 a S3 (capas de ECR) via gateway endpoint"
+  description       = "443 to S3 (ECR layers) via gateway endpoint"
   ip_protocol       = "tcp"
   from_port         = 443
   to_port           = 443
@@ -133,7 +133,7 @@ resource "aws_vpc_security_group_egress_rule" "task_to_s3" {
 
 resource "aws_vpc_security_group_ingress_rule" "endpoints_from_task" {
   security_group_id            = aws_security_group.endpoints.id
-  description                  = "443 desde las tareas"
+  description                  = "443 from the tasks"
   ip_protocol                  = "tcp"
   from_port                    = 443
   to_port                      = 443
@@ -278,7 +278,7 @@ resource "aws_ecs_service" "app" {
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.app.arn
   launch_type     = "FARGATE"
-  # Sin imagen (bootstrap del registro) no hay nada que ejecutar: 0 tareas.
+  # With no image (registry bootstrap) there is nothing to run: 0 tasks.
   desired_count          = var.image != "" ? var.replicas : 0
   enable_execute_command = false
 

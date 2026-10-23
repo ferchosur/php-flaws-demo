@@ -1,4 +1,4 @@
-# Estado y variables de Terraform: pueden contener IDs, rutas y, en VM, claves SSH generadas.
+# Terraform state and variables: may contain IDs, paths and, on VM, generated SSH keys.
 **/.terraform/
 **/*.tfstate
 **/*.tfstate.*
@@ -6,7 +6,7 @@
 **/.terraform.lock.hcl.bak
 crash.log
 
-# Configuración local del operador y artefactos de despliegue.
+# Operator local configuration and deployment artifacts.
 deployment.json
 build/
 labs/

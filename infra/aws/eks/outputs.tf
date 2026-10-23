@@ -1,14 +1,14 @@
 output "registry_url" {
-  description = "URL del repositorio ECR (sin tag)."
+  description = "ECR repository URL (no tag)."
   value       = aws_ecr_repository.app.repository_url
 }
 
 output "kubeconfig_command" {
-  description = "Comando para configurar kubectl."
+  description = "Command to configure kubectl."
   value       = "aws eks update-kubeconfig --name ${aws_eks_cluster.main.name} --region ${var.region}"
 }
 
 output "app_url" {
-  description = "Vacio: deploy.py obtiene el hostname del LoadBalancer tras aplicar los manifiestos."
+  description = "Empty: deploy.py gets the LoadBalancer hostname after applying the manifests."
   value       = ""
 }

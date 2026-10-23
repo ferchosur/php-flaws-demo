@@ -1,11 +1,11 @@
-# EKS + managed node group. Los manifiestos Kubernetes de k8s/ los aplica deploy.py con kubectl,
-# NO Terraform. Un Service type LoadBalancer requiere el AWS Load Balancer Controller (o el
-# cloud provider in-tree para CLB), que este stack NO instala: pendiente abierto.
+# EKS + managed node group. The Kubernetes manifests in k8s/ are applied by deploy.py with kubectl,
+# NOT Terraform. A LoadBalancer Service requires the AWS Load Balancer Controller (or the
+# in-tree cloud provider for CLB), which this stack does NOT install: open item.
 #
 # Residuales documentados:
-# - Un unico NAT gateway da egreso general a los nodos privados (EKS lo necesita para API/registros).
-# - AmazonEC2ContainerRegistryReadOnly permite leer todos los repos ECR de la cuenta; AWS no ofrece
-#   una politica administrada limitada a un solo repositorio.
+# - A single NAT gateway gives general egress to the private nodes (EKS needs it for API/registries).
+# - AmazonEC2ContainerRegistryReadOnly can read every ECR repo in the account; AWS does not offer
+#   a managed policy scoped to a single repository.
 
 data "aws_availability_zones" "available" {
   state = "available"
@@ -184,7 +184,7 @@ resource "aws_eks_cluster" "main" {
   lifecycle {
     precondition {
       condition     = length(var.admin_cidrs) > 0
-      error_message = "admin_cidrs es obligatorio en EKS: indique al menos un CIDR x.x.x.x/32."
+      error_message = "admin_cidrs is required on EKS: provide at least one CIDR x.x.x.x/32."
     }
   }
 
@@ -195,8 +195,8 @@ resource "aws_eks_cluster" "main" {
   ]
 }
 
-# EKS no aplica NetworkPolicy con VPC CNI de forma predeterminada. Habilitarla
-# aquí es necesario para que k8s/40-networkpolicy.yaml restrinja el tráfico de pods.
+# EKS does not enforce NetworkPolicy with the VPC CNI by default. Enabling it
+# here is required for k8s/40-networkpolicy.yaml to restrict pod traffic.
 resource "aws_eks_addon" "vpc_cni" {
   cluster_name         = aws_eks_cluster.main.name
   addon_name           = "vpc-cni"

@@ -1,5 +1,5 @@
-# NodePort fijo 30080 (mapeado por kind a localhost:8080). kind no trae
-# LoadBalancer, así que no se usa type: LoadBalancer como en la nube.
+# Fixed NodePort 30080 (mapped by kind to localhost:8080). kind has no
+# LoadBalancer, so type: LoadBalancer is not used as in the cloud.
 apiVersion: v1
 kind: Service
 metadata:

@@ -2,7 +2,7 @@ resource "terraform_data" "guard" {
   lifecycle {
     precondition {
       condition     = var.project_id != ""
-      error_message = "project_id es obligatorio en GCP."
+      error_message = "project_id is required on GCP."
     }
   }
 }
@@ -25,7 +25,7 @@ data "google_project" "current" {
 
 # Presupuesto filtrado por proyecto y etiqueta created_by.
 # Las notificaciones por correo no se soportan directamente (requieren canal de
-# Cloud Monitoring o Pub/Sub); alert_email se ignora aquí.
+# Cloud Monitoring or Pub/Sub); alert_email is ignored here.
 resource "google_billing_budget" "budget" {
   count = var.billing_account_id != "" ? 1 : 0
 

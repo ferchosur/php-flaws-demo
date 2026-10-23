@@ -1,9 +1,9 @@
 output "registry_url" {
-  description = "URL del repositorio ECR (sin tag)."
+  description = "ECR repository URL (no tag)."
   value       = aws_ecr_repository.app.repository_url
 }
 
 output "app_url" {
-  description = "URL publica estable de la aplicacion (Elastic IP)."
+  description = "Stable public application URL (Elastic IP)."
   value       = "http://${aws_eip.app.public_ip}"
 }

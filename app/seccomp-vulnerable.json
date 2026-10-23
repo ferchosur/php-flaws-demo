@@ -1,5 +1,5 @@
 {
-  "_comment": "Jaula de syscalls para el perfil PHP vulnerable (CVE-2026-109618 / CVE-2026-109619). Lista de denegacion sobre permitir-por-defecto: no requiere privilegios ni CAP_SYS_CHROOT, por lo que conserva el modelo UID 101 + cap-drop ALL. NOTA: execve NO se puede denegar aqui: el runtime del contenedor lo usa para lanzar el propio php (si se deniega, el contenedor no arranca: 'exec /usr/local/bin/php: operation not permitted'). La ejecucion de comandos se bloquea en la capa PHP (disable_functions) y por la ausencia de shell y de cualquier otro binario en la imagen. Esta jaula bloquea los primitivos de kernel de escape y movimiento lateral (ptrace, montajes, namespaces, carga de modulos, kexec, bpf).",
+  "_comment": "Syscall jail for the vulnerable PHP profile (CVE-2026-109618 / CVE-2026-109619). Deny-list over allow-by-default: requires no privileges or CAP_SYS_CHROOT, so it keeps the UID 101 + cap-drop ALL model. NOTE: execve CANNOT be denied here: the container runtime uses it to launch php itself (if denied, the container does not start: 'exec /usr/local/bin/php: operation not permitted'). Command execution is blocked at the PHP layer (disable_functions) and by the absence of a shell and any other binary in the image. This jail blocks the kernel escape and lateral-movement primitives (ptrace, mounts, namespaces, module loading, kexec, bpf).",
   "defaultAction": "SCMP_ACT_ALLOW",
   "archMap": [
     {
@@ -33,7 +33,7 @@
       ],
       "action": "SCMP_ACT_ERRNO",
       "errnoRet": 1,
-      "comment": "Depuracion de otros procesos, manipulacion de namespaces/montajes, carga de modulos del kernel, kexec y bpf. Ninguna la usa un servidor web PHP/nginx; todas son vectores de escape o movimiento lateral. execve se deja permitido porque el runtime lo necesita para arrancar el contenedor."
+      "comment": "Debugging other processes, namespace/mount manipulation, kernel module loading, kexec and bpf. None are used by a PHP/nginx web server; all are escape or lateral-movement vectors. execve is left allowed because the runtime needs it to start the container."
     }
   ]
 }

@@ -12,10 +12,10 @@ resource "random_string" "acr_suffix" {
   special = false
 }
 
-# Registro privado. public_network_access_enabled = true: el deployer (equipo del
-# operador) hace push y los servicios hacen pull por el endpoint público; la
-# autenticación es solo Entra ID/RBAC (admin_enabled = false, sin pull anónimo).
-# Defender for Containers (escaneo de imágenes) queda fuera de alcance.
+# Private registry. public_network_access_enabled = true: the deployer (operator
+# machine) pushes and the services pull over the public endpoint; the
+# authentication is Entra ID/RBAC only (admin_enabled = false, no anonymous pull).
+# Defender for Containers (image scanning) is out of scope.
 resource "azurerm_container_registry" "app" {
   name                          = replace("${var.name_prefix}acr${random_string.acr_suffix.result}", "-", "")
   resource_group_name           = azurerm_resource_group.main.name
@@ -36,7 +36,7 @@ resource "azurerm_log_analytics_workspace" "main" {
   tags                = local.tags
 }
 
-# Solo se crea con alert_email; sin él no hay a quién notificar.
+# Only created with alert_email; without it there is no one to notify.
 resource "azurerm_consumption_budget_resource_group" "main" {
   count             = var.alert_email != "" ? 1 : 0
   name              = "${var.name_prefix}-budget"

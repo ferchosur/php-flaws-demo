@@ -6,8 +6,8 @@ locals {
   sz = local.sizes[var.size]
 }
 
-# Única identidad adjunta a la app: solo puede hacer pull de imágenes (AcrPull
-# sobre el registro). La app no tiene identidad SystemAssigned ni otros roles.
+# Only identity attached to the app: it can only pull images (AcrPull
+# on the registry). The app has no SystemAssigned identity or other roles.
 resource "azurerm_user_assigned_identity" "pull" {
   name                = "${var.name_prefix}-pull"
   resource_group_name = azurerm_resource_group.main.name
@@ -21,7 +21,7 @@ resource "azurerm_role_assignment" "pull" {
   principal_id         = azurerm_user_assigned_identity.pull.principal_id
 }
 
-# Sin VNet (residual: egreso sin restricción desde el entorno Consumption).
+# No VNet (residual: unrestricted egress from the Consumption environment).
 resource "azurerm_container_app_environment" "main" {
   name                       = "${var.name_prefix}-env"
   resource_group_name        = azurerm_resource_group.main.name
@@ -30,7 +30,7 @@ resource "azurerm_container_app_environment" "main" {
   tags                       = local.tags
 }
 
-# count = 0 durante el bootstrap del registro (image vacío).
+# count = 0 during registry bootstrap (empty image).
 resource "azurerm_container_app" "app" {
   count                        = var.image == "" ? 0 : 1
   name                         = "${var.name_prefix}-app"
@@ -65,7 +65,7 @@ resource "azurerm_container_app" "app" {
     min_replicas = 1
     max_replicas = var.replicas
 
-    # Container Apps no soporta root filesystem de solo lectura (residual).
+    # Container Apps does not support a read-only root filesystem (residual).
     container {
       name   = "app"
       image  = var.image

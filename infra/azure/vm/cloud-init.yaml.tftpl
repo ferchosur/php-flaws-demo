@@ -1,6 +1,6 @@
 #cloud-config
-# Registro: ${registry_host}
-# El NSG solo permite egreso a 443 y 53: se fuerza HTTPS en los repos de apt.
+# Registry: ${registry_host}
+# The NSG only allows egress to 443 and 53: HTTPS is forced on the apt repos.
 write_files:
   - path: /etc/docker/seccomp-vulnerable.json
     encoding: b64

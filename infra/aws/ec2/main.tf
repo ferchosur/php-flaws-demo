@@ -1,7 +1,7 @@
-# EC2 unica con Docker via cloud-init. Sin key pair, sin puerto 22.
-# Residual documentado: la instancia necesita un instance profile solo para hacer pull de ECR
-# (permisos limitados a las acciones de pull sobre el repositorio). El contenedor corre con
-# IMDS hop limit 1, por lo que no alcanza el endpoint de metadatos desde su red bridge.
+# Single EC2 with Docker via cloud-init. No key pair, no port 22.
+# Documented residual: the instance needs an instance profile only to pull from ECR
+# (permissions limited to pull actions on the repository). The container runs with
+# IMDS hop limit 1, so it cannot reach the metadata endpoint from its bridge network.
 
 data "aws_availability_zones" "available" {
   state = "available"
@@ -49,13 +49,13 @@ resource "aws_route_table_association" "public" {
 
 resource "aws_security_group" "instance" {
   name        = "${local.name}-instance"
-  description = "HTTP 80 desde Internet; egreso solo 443 y 53"
+  description = "HTTP 80 from the Internet; egress only 443 and 53"
   vpc_id      = aws_vpc.main.id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "http" {
   security_group_id = aws_security_group.instance.id
-  description       = "HTTP desde Internet"
+  description       = "HTTP from the Internet"
   ip_protocol       = "tcp"
   from_port         = 80
   to_port           = 80
@@ -64,7 +64,7 @@ resource "aws_vpc_security_group_ingress_rule" "http" {
 
 resource "aws_vpc_security_group_egress_rule" "https" {
   security_group_id = aws_security_group.instance.id
-  description       = "HTTPS (repos dnf, ECR, metadatos de servicio)"
+  description       = "HTTPS (dnf repos, ECR, service metadata)"
   ip_protocol       = "tcp"
   from_port         = 443
   to_port           = 443
@@ -89,7 +89,7 @@ resource "aws_vpc_security_group_egress_rule" "dns_udp" {
   cidr_ipv4         = "0.0.0.0/0"
 }
 
-# ---------------------------------------------------------------- IAM (solo pull de ECR)
+# ---------------------------------------------------------------- IAM (ECR pull only)
 resource "aws_iam_role" "instance" {
   name = "${local.name}-instance"
 
@@ -169,8 +169,8 @@ resource "aws_instance" "app" {
   depends_on = [aws_route_table_association.public]
 }
 
-# IP pública estable: sobrevive al reemplazo de la instancia, para que la URL de la
-# demo no cambie (p. ej. http://108.133.115.98).
+# Stable public IP: survives instance replacement, so the demo URL does
+# not change (e.g. http://108.133.115.98).
 resource "aws_eip" "app" {
   domain   = "vpc"
   instance = aws_instance.app.id

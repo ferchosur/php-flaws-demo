@@ -1,4 +1,4 @@
-# Alerta de costo mensual filtrada por la etiqueta created_by (solo si hay correo).
+# Monthly cost alert filtered by the created_by tag (only if an email is set).
 resource "aws_budgets_budget" "monthly" {
   count = var.alert_email != "" ? 1 : 0
 

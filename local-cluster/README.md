@@ -1,79 +1,79 @@
-# Clúster local (kind) — Mercado Norte PHP Flaws Demo
+# Local cluster (kind) — Mercado Norte PHP Flaws Demo
 
-Escenario para correr la demo en un **clúster Kubernetes local** sobre Docker, sin
-infraestructura en la nube. Pensado para probar el exploit de CVE-2026-109618 /
-CVE-2026-109619 en el perfil **"prod descuidado"** (sin endurecer) en tu propio equipo.
+Scenario to run the demo on a **local Kubernetes cluster** on top of Docker, with no
+cloud infrastructure. Intended for testing the CVE-2026-109618 / CVE-2026-109619
+exploit on the **"careless prod"** (unhardened) profile on your own machine.
 
-## Aplicaciones requeridas
+## Required applications
 
-| Aplicación | Para qué | Instalación |
+| Application | Purpose | Install |
 |---|---|---|
-| **Docker** (en marcha) | kind corre el clúster como contenedores Docker; también construye la imagen. | https://docs.docker.com/engine/install/ |
-| **kind** ≥ 0.24 | Crea el clúster Kubernetes local. | `curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64 && chmod +x ./kind && mkdir -p ~/.local/bin && mv ./kind ~/.local/bin/` · macOS: `brew install kind` |
-| **kubectl** | Aplica los manifiestos y consulta el estado. | https://kubernetes.io/docs/tasks/tools/ |
-| **Python** ≥ 3.11 | Ejecuta `deploy.py`. | — |
+| **Docker** (running) | kind runs the cluster as Docker containers; it also builds the image. | https://docs.docker.com/engine/install/ |
+| **kind** ≥ 0.24 | Creates the local Kubernetes cluster. | `curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64 && chmod +x ./kind && mkdir -p ~/.local/bin && mv ./kind ~/.local/bin/` · macOS: `brew install kind` |
+| **kubectl** | Applies the manifests and queries status. | https://kubernetes.io/docs/tasks/tools/ |
+| **Python** ≥ 3.11 | Runs `deploy.py`. | — |
 
-`deploy.py` comprueba estas herramientas y, si falta kind, imprime el comando de instalación.
+`deploy.py` checks these tools and, if kind is missing, prints the install command.
 
-## Recursos del equipo
+## Machine resources
 
-- **~2 vCPU** y **~2 GB de RAM** libres (nodo kind + app a 1 réplica).
-- **Puerto `8080/TCP` libre en `127.0.0.1`** — kind lo mapea al NodePort `30080`.
-- ~1 GB de disco para la imagen de nodo de kind (`kindest/node`), se descarga una vez.
+- **~2 vCPU** and **~2 GB of free RAM** (kind node + app at 1 replica).
+- **Port `8080/TCP` free on `127.0.0.1`** — kind maps it to NodePort `30080`.
+- ~1 GB of disk for the kind node image (`kindest/node`), downloaded once.
 
-## Qué se crea (todo local, nada facturable)
+## What gets created (all local, nothing billable)
 
-| Recurso | Nombre | Notas |
+| Resource | Name | Notes |
 |---|---|---|
-| Clúster kind | `php-flaws-demo` | 1 nodo control-plane (contenedor Docker). |
+| kind cluster | `php-flaws-demo` | 1 control-plane node (Docker container). |
 | Namespace | `php-flaws-demo` | — |
-| Deployment | `php-flaws-demo` | 1 réplica. Perfil baseline o endurecido según `demo_mode`. |
+| Deployment | `php-flaws-demo` | 1 replica. Baseline or hardened profile per `demo_mode`. |
 | Service | `php-flaws-demo` | `NodePort 30080` → `localhost:8080`. |
-| Imagen | `php-flaws-demo:local` | Construida en local y cargada con `kind load docker-image`. |
+| Image | `php-flaws-demo:local` | Built locally and loaded with `kind load docker-image`. |
 
-No usa credenciales cloud ni crea recursos en ninguna nube.
+Uses no cloud credentials and creates nothing in any cloud.
 
-## Uso
+## Usage
 
 ```sh
-python deploy.py configure        # elige perfil del runtime (opción 2a):
-                                  #   - vulnerable-baseline  (prod descuidado, recomendado aquí)
-                                  #   - vulnerable-php        (endurecido, para el A/B)
+python deploy.py configure        # choose the runtime profile (option 2a):
+                                  #   - vulnerable-baseline  (careless prod, recommended here)
+                                  #   - vulnerable-php        (hardened, for the A/B)
                                   #   - safe-simulation
-python deploy.py local-cluster        # construye, crea el clúster y despliega
-#   -> URL local: http://localhost:8080
-python deploy.py local-cluster-down   # borra el clúster local
+python deploy.py local-cluster        # builds, creates the cluster and deploys
+#   -> Local URL: http://localhost:8080
+python deploy.py local-cluster-down   # deletes the local cluster
 ```
 
-En el menú interactivo son las opciones **7** (levantar) y **8** (borrar).
+In the interactive menu these are options **7** (bring up) and **8** (delete).
 
-## Perfiles
+## Profiles
 
-| Perfil | securityContext | Red | Para qué |
+| Profile | securityContext | Network | Purpose |
 |---|---|---|---|
-| `vulnerable-baseline` | root, escalada permitida, fs de escritura, **seccomp Unconfined**, token de SA montado | **egreso abierto** (sin NetworkPolicy) | Imitar un prod sin endurecer: la explotación habilita shell, comandos (`system`, `exec`), `curl`/`nc` y movimiento lateral dentro del clúster. |
-| `vulnerable-php` | no root (101), `cap-drop ALL`, fs de solo lectura, **seccomp RuntimeDefault**, sin token de SA | Ver nota | Lado "mitigado" del A/B: mismo bug, radio de impacto reducido. |
+| `vulnerable-baseline` | root, escalation allowed, writable fs, **seccomp Unconfined**, SA token mounted | **open egress** (no NetworkPolicy) | Mimic an unhardened prod: exploitation enables a shell, commands (`system`, `exec`), `curl`/`nc` and lateral movement inside the cluster. |
+| `vulnerable-php` | non-root (101), `cap-drop ALL`, read-only fs, **seccomp RuntimeDefault**, no SA token | See note | The "mitigated" side of the A/B: same bug, reduced blast radius. |
 
-El manifiesto baseline es `manifests/20-deployment-baseline.yaml`; el endurecido,
-`manifests/20-deployment-hardened.yaml`. `deploy.py` elige según `demo_mode`.
+The baseline manifest is `manifests/20-deployment-baseline.yaml`; the hardened one,
+`manifests/20-deployment-hardened.yaml`. `deploy.py` picks one based on `demo_mode`.
 
-> **Nota sobre NetworkPolicy en kind:** el CNI por defecto (kindnet) **no** aplica
-> NetworkPolicy. El `egress-deny` que sí funciona en la nube (GKE/AKS/EKS) **no** se
-> reproduce en kind. En el perfil baseline da igual (el egreso está abierto a
-> propósito); en el endurecido, el resto de los controles sí aplican, pero el
-> aislamiento de red no. Para reproducir egress-deny en local habría que instalar
-> Calico en el clúster kind.
+> **Note on NetworkPolicy in kind:** the default CNI (kindnet) does **not** enforce
+> NetworkPolicy. The `egress-deny` that works in the cloud (GKE/AKS/EKS) is **not**
+> reproduced in kind. In the baseline profile it doesn't matter (egress is open on
+> purpose); in the hardened one, the rest of the controls do apply, but network
+> isolation does not. To reproduce egress-deny locally you would install Calico on
+> the kind cluster.
 
-## Diferencia con `python deploy.py local`
+## Difference from `python deploy.py local`
 
-`local` corre **un solo contenedor** con `docker run` (útil para una prueba rápida).
-`local-cluster` corre la app en un **clúster Kubernetes** real (kind), más cercano a
-cómo se despliega en producción: Deployment, Service, probes y el mismo flujo de
-manifiestos que la nube.
+`local` runs **a single container** with `docker run` (handy for a quick test).
+`local-cluster` runs the app on a real **Kubernetes cluster** (kind), closer to how it
+is deployed in production: Deployment, Service, probes and the same manifest flow as
+the cloud.
 
-## Límite de la contención (prod descuidado)
+## Containment limit (careless prod)
 
-El perfil baseline **permite ejecución de comandos y movimiento lateral dentro del
-clúster local**. La contención real es que todo vive en tu equipo, en un clúster kind
-efímero, sin credenciales cloud. No lo despliegues en la nube: `deploy.py` bloquea el
-perfil baseline en `deploy` por ese motivo.
+The baseline profile **allows command execution and lateral movement inside the local
+cluster**. The real containment is that everything lives on your machine, in an
+ephemeral kind cluster, with no cloud credentials. Do not deploy it to the cloud:
+`deploy.py` blocks the baseline profile in `deploy` for that reason.

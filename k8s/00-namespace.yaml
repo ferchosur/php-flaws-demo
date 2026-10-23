@@ -1,4 +1,4 @@
-# Namespace dedicado con Pod Security Standards "restricted" en modo enforce.
+# Dedicated namespace with Pod Security Standards "restricted" in enforce mode.
 apiVersion: v1
 kind: Namespace
 metadata:

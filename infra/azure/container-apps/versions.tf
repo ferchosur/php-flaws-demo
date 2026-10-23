@@ -15,6 +15,6 @@ terraform {
 
 provider "azurerm" {
   features {}
-  # No depende de registro de proveedores a nivel de suscripción.
+  # Does not depend on subscription-level provider registration.
   resource_provider_registrations = "none"
 }

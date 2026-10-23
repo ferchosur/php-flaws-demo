@@ -1,5 +1,5 @@
 output "registry_url" {
-  description = "Repositorio de imágenes en ACR."
+  description = "Image repository in ACR."
   value       = "${azurerm_container_registry.app.login_server}/${local.repository}"
 }
 

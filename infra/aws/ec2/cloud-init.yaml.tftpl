@@ -1,5 +1,5 @@
 #cloud-config
-# Sin secretos en este archivo: el login a ECR usa el instance profile y no se imprime.
+# No secrets in this file: the ECR login uses the instance profile and is not printed.
 write_files:
   - path: /etc/docker/seccomp-vulnerable.json
     encoding: b64

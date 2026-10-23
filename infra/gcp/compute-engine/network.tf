@@ -9,7 +9,7 @@ resource "google_compute_network" "vpc" {
 resource "google_compute_address" "app" {
   name        = "${var.name_prefix}-ip"
   region      = var.region
-  description = "IP publica estable de la demo. created_by: ${var.owner}"
+  description = "Stable public IP for the demo. created_by: ${var.owner}"
   labels      = local.labels
 
   depends_on = [google_project_service.api]
@@ -24,7 +24,7 @@ resource "google_compute_subnetwork" "subnet" {
   description              = "created_by: ${var.owner}"
 }
 
-# Único ingreso: HTTP al puerto de la app. No hay reglas 22/3389.
+# Single ingress: HTTP to the app port. No 22/3389 rules.
 resource "google_compute_firewall" "allow_http" {
   name          = "${var.name_prefix}-allow-http"
   network       = google_compute_network.vpc.name
@@ -32,7 +32,7 @@ resource "google_compute_firewall" "allow_http" {
   priority      = 1000
   source_ranges = ["0.0.0.0/0"]
   target_tags   = [local.web_tag]
-  description   = "Ingreso HTTP publico a la app. created_by: ${var.owner}"
+  description   = "Public HTTP ingress to the app. created_by: ${var.owner}"
 
   allow {
     protocol = "tcp"

@@ -1,5 +1,5 @@
-# Clúster kind de un solo nodo. Mapea el NodePort 30080 del nodo al puerto 8080
-# del equipo, para que la app quede en http://localhost:8080 sin port-forward.
+# Single-node kind cluster. Maps the node's NodePort 30080 to the machine's port
+# 8080, so the app is reachable at http://localhost:8080 without port-forward.
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 nodes:

@@ -1,16 +1,16 @@
-# Mercado Norte: imagen mínima y endurecida para el sitio estático de la demo.
+# Mercado Norte: minimal, hardened image for the demo's static site.
 #
-# - Sin PHP, sin secretos, sin herramientas de administración.
-# - Corre como usuario 101 (sin root). Tras la compilación se eliminan el intérprete de
-#   comandos, apk y los clientes de red, de modo que un atacante no tenga shell ni wget/curl.
-# - El sistema de archivos debe montarse de solo lectura; solo /tmp es escribible.
+# - No PHP, no secrets, no administration tools.
+# - Runs as user 101 (non-root). After the build the command interpreter, apk and
+#   the network clients are removed, so an attacker has no shell or wget/curl.
+# - The filesystem must be mounted read-only; only /tmp is writable.
 #
-# Para reproducir en local:
+# To reproduce locally:
 #   docker build -f app/Dockerfile -t php-flaws-demo:local .
 #   docker run --rm -p 8080:8080 --read-only --tmpfs /tmp --user 101:101 \
 #     --cap-drop ALL --security-opt no-new-privileges php-flaws-demo:local
 #
-# Fijar la imagen base por digest antes de un despliegue real:
+# Pin the base image by digest before a real deployment:
 #   docker buildx imagetools inspect nginxinc/nginx-unprivileged:1.27-alpine
 
 FROM nginxinc/nginx-unprivileged:1.27-alpine
@@ -25,7 +25,7 @@ RUN rm -f /etc/nginx/conf.d/*.conf \
  && rm -f /bin/sh /bin/busybox /sbin/apk /usr/bin/wget /usr/bin/curl \
  && rm -rf /etc/apk /lib/apk /var/cache/apk
 
-# Sin shell, el entrypoint de la imagen base no existe: se arranca nginx directamente.
+# With no shell, the base image's entrypoint does not exist: start nginx directly.
 ENTRYPOINT ["/usr/sbin/nginx"]
 CMD ["-g", "daemon off;"]
 

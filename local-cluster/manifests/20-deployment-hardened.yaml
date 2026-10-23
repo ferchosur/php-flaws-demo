@@ -1,7 +1,7 @@
-# Perfil endurecido (equivalente local de k8s/20-deployment.yaml, 1 réplica).
-# Nota: kindnet (CNI por defecto de kind) NO aplica NetworkPolicy; el egress-deny
-# de la nube no se reproduce aquí. El resto del endurecimiento (no root, cap-drop,
-# fs de solo lectura, seccomp, sin token de SA) sí aplica.
+# Hardened profile (local equivalent of k8s/20-deployment.yaml, 1 replica).
+# Note: kindnet (kind's default CNI) does NOT enforce NetworkPolicy; the cloud
+# egress-deny is not reproduced here. The rest of the hardening (non-root,
+# cap-drop, read-only fs, seccomp, no SA token) does apply.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -6,10 +6,10 @@ resource "google_compute_network" "vpc" {
   depends_on = [google_project_service.api]
 }
 
-# Sin Cloud NAT (decisión): los nodos son privados y alcanzan las APIs de Google
-# (registro, logging, monitoring) por Private Google Access. Sin NAT los nodos
-# no tienen salida a internet general; reduce el egreso residual de un nodo
-# comprometido. Imágenes públicas externas (Docker Hub) no son descargables.
+# No Cloud NAT (decision): the nodes are private and reach Google APIs
+# (registry, logging, monitoring) via Private Google Access. Without NAT the nodes
+# have no general internet egress; this reduces the residual egress of a node
+# when compromised. External public images (Docker Hub) are not pullable.
 resource "google_compute_subnetwork" "nodes" {
   name                     = "${var.name_prefix}-nodes"
   region                   = var.region
