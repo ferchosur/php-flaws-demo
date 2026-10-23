@@ -10,6 +10,8 @@ Demo reutilizable para presentar CVE-2026-109618 y CVE-2026-109619 en una tienda
 | Imagen segura | `app/Dockerfile` | nginx sin privilegios, sin módulos de script, sin shell tras el build. Predeterminada para todas las nubes y plataformas. |
 | Runtime vulnerable | `app/Dockerfile-vulnerable`, `app/vulnerable/` | Perfil optativo PHP 8.5.11 para VM y Kubernetes, previo a la versión corregida 8.5.12. El recorrido de interfaz no envía exploits; el runtime sí procesa HTTP. |
 | Jaula seccomp | `app/seccomp-vulnerable.json` | Lista de denegación de syscalls de escape (ptrace, mount, namespaces, carga de módulos, kexec, bpf) aplicada al runtime vulnerable en VM. Sin privilegios: conserva UID 101 y `cap-drop ALL`. |
+| Runtime "prod descuidado" | `app/Dockerfile-vulnerable-baseline` | Perfil vulnerable SIN endurecer (root, shell, `curl`/`nc`, sin `disable_functions`, sin seccomp) para contrastar con el endurecido. Solo clúster local / labs aislados; `deploy.py` lo bloquea en la nube. |
+| Clúster local | `local-cluster/` | Escenario kind (Kubernetes local sobre Docker) con prerequisitos, recursos y manifiestos. Ver [local-cluster/README.md](local-cluster/README.md). |
 | Menú | `deploy.py` | Menú interactivo (stdlib de Python 3.11+): configura, prueba en local, planifica, despliega y destruye. |
 | Infraestructura | `infra/<nube>/<plataforma>/` | Nueve raíces de Terraform con el mismo contrato de variables. |
 | Kubernetes | `k8s/` | Manifiestos del namespace, con Pod Security `restricted` y red por defecto denegada. |
@@ -17,20 +19,26 @@ Demo reutilizable para presentar CVE-2026-109618 y CVE-2026-109619 en una tienda
 ## Uso rápido
 
 ```sh
-python deploy.py            # menú principal
-python deploy.py local      # imagen en Docker con el mismo hardening que en la nube
+python deploy.py                   # menú principal
+python deploy.py local             # un contenedor en Docker (prueba rápida)
+python deploy.py local-cluster     # clúster Kubernetes local con kind (ver local-cluster/)
+python deploy.py local-cluster-down
 ```
 
 Sin Docker, la tienda puede previsualizarse con `python -m http.server 8000 -d web`. Esa vista no aplica las cabeceras ni el endurecimiento de nginx.
 
 ### Menú
 
-1. **Configurar**: nube (AWS, Azure, GCP), infraestructura, región, prefijo, responsable (`created_by`), fecha de caducidad, tamaño, réplicas, presupuesto, correo de alertas, proyecto (GCP) y, en Kubernetes, la IP del operador para el API. VM y Kubernetes permiten elegir entre simulación segura y runtime PHP vulnerable.
+1. **Configurar**: nube (AWS, Azure, GCP), infraestructura, región, prefijo, responsable (`created_by`), fecha de caducidad, tamaño, réplicas, presupuesto, correo de alertas, proyecto (GCP) y, en Kubernetes, la IP del operador para el API. VM y Kubernetes permiten elegir el perfil del runtime: simulación segura, vulnerable endurecido (seccomp) o vulnerable "prod descuidado".
 2. **Ver configuración**.
-3. **Probar en local** con Docker.
+3. **Probar en local** con Docker (un contenedor).
 4. **Planificar** (`terraform plan`, sin cambios).
 5. **Desplegar**: pide escribir el prefijo para confirmar.
 6. **Destruir**: pide confirmación igual.
+7. **Clúster local con kind (levantar)**: Kubernetes local sobre Docker. Ver [local-cluster/README.md](local-cluster/README.md).
+8. **Clúster local con kind (borrar)**.
+
+El perfil "prod descuidado" (sin endurecer) está pensado para el clúster local; `deploy.py` lo **bloquea** en el despliegue a la nube.
 
 `deployment.json` guarda la configuración y no contiene secretos.
 

@@ -11,9 +11,6 @@ deployment.json
 build/
 labs/
 
-# Objetivo vulnerable: no se versiona ni se distribuye desde este repositorio.
-app/vulnerable/
-app/*vulnerable*
 
 # Python
 __pycache__/

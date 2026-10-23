@@ -1,0 +1,39 @@
+{
+  "_comment": "Jaula de syscalls para el perfil PHP vulnerable (CVE-2026-109618 / CVE-2026-109619). Lista de denegacion sobre permitir-por-defecto: no requiere privilegios ni CAP_SYS_CHROOT, por lo que conserva el modelo UID 101 + cap-drop ALL. NOTA: execve NO se puede denegar aqui: el runtime del contenedor lo usa para lanzar el propio php (si se deniega, el contenedor no arranca: 'exec /usr/local/bin/php: operation not permitted'). La ejecucion de comandos se bloquea en la capa PHP (disable_functions) y por la ausencia de shell y de cualquier otro binario en la imagen. Esta jaula bloquea los primitivos de kernel de escape y movimiento lateral (ptrace, montajes, namespaces, carga de modulos, kexec, bpf).",
+  "defaultAction": "SCMP_ACT_ALLOW",
+  "archMap": [
+    {
+      "architecture": "SCMP_ARCH_X86_64",
+      "subArchitectures": ["SCMP_ARCH_X86", "SCMP_ARCH_X32"]
+    },
+    {
+      "architecture": "SCMP_ARCH_AARCH64",
+      "subArchitectures": ["SCMP_ARCH_ARM"]
+    }
+  ],
+  "syscalls": [
+    {
+      "names": [
+        "ptrace",
+        "process_vm_readv",
+        "process_vm_writev",
+        "mount",
+        "umount2",
+        "pivot_root",
+        "chroot",
+        "setns",
+        "unshare",
+        "kexec_load",
+        "kexec_file_load",
+        "init_module",
+        "finit_module",
+        "delete_module",
+        "bpf",
+        "perf_event_open"
+      ],
+      "action": "SCMP_ACT_ERRNO",
+      "errnoRet": 1,
+      "comment": "Depuracion de otros procesos, manipulacion de namespaces/montajes, carga de modulos del kernel, kexec y bpf. Ninguna la usa un servidor web PHP/nginx; todas son vectores de escape o movimiento lateral. execve se deja permitido porque el runtime lo necesita para arrancar el contenedor."
+    }
+  ]
+}

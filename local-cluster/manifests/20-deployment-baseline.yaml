@@ -1,0 +1,47 @@
+# Perfil "prod descuidado": sin endurecimiento. Para contrastar con el perfil
+# endurecido (20-deployment-hardened.yaml). NO usar en nube ni fuera del lab.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-flaws-demo
+  namespace: php-flaws-demo
+  labels:
+    created_by: __OWNER__
+    app: php-flaws-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: php-flaws-demo
+  template:
+    metadata:
+      labels:
+        created_by: __OWNER__
+        app: php-flaws-demo
+    spec:
+      # Prod descuidado: monta el token de la ServiceAccount por defecto.
+      containers:
+        - name: web
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            # Sin endurecimiento: root, escalada permitida, fs de escritura, seccomp Unconfined.
+            runAsNonRoot: false
+            allowPrivilegeEscalation: true
+            readOnlyRootFilesystem: false
+            seccompProfile:
+              type: Unconfined
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+# Sin NetworkPolicy: egreso e ingreso interno abiertos (como un prod sin segmentar).

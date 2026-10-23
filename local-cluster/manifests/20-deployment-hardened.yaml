@@ -1,0 +1,62 @@
+# Perfil endurecido (equivalente local de k8s/20-deployment.yaml, 1 réplica).
+# Nota: kindnet (CNI por defecto de kind) NO aplica NetworkPolicy; el egress-deny
+# de la nube no se reproduce aquí. El resto del endurecimiento (no root, cap-drop,
+# fs de solo lectura, seccomp, sin token de SA) sí aplica.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: php-flaws-demo
+  namespace: php-flaws-demo
+  labels:
+    created_by: __OWNER__
+    app: php-flaws-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: php-flaws-demo
+  template:
+    metadata:
+      labels:
+        created_by: __OWNER__
+        app: php-flaws-demo
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: web
+          image: __IMAGE__
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi

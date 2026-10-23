@@ -1,0 +1,26 @@
+# Perfil "prod descuidado": PHP 8.5.11 vulnerable (CVE-2026-109618 / CVE-2026-109619)
+# SIN endurecimiento, para contrastar con el perfil endurecido + seccomp.
+#
+# A diferencia de Dockerfile-vulnerable, este perfil imita un despliegue de
+# producción donde no se cuida la seguridad:
+#   - corre como root,
+#   - conserva shell (/bin/sh, bash) y herramientas de red (curl, nc),
+#   - NO fija disable_functions (exec/system/shell_exec quedan disponibles),
+#   - no se le aplica seccomp.
+# Habilita ejecucion de comandos y movimiento lateral dentro del lab. Usar solo
+# en el clúster local o en labs aislados y efímeros. NUNCA en el nivel serverless
+# ni con identidad cloud amplia.
+FROM php:8.5.11-cli-alpine
+
+WORKDIR /srv
+COPY web/ /srv/
+COPY app/vulnerable/index.php /srv/index.php
+COPY app/vulnerable/router.php /srv/router.php
+COPY app/vulnerable/runtime-profile.js /srv/assets/runtime-profile.js
+
+# Herramientas típicas de una imagen de prod "con todo incluido".
+RUN apk add --no-cache bash curl busybox-extras
+
+# Sin USER (root), sin disable_functions, sin ffi.enable=0.
+EXPOSE 8080
+ENTRYPOINT ["php", "-S", "0.0.0.0:8080", "-t", "/srv", "/srv/router.php"]

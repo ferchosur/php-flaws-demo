@@ -1,0 +1,23 @@
+# Perfil de runtime previo a los parches de CVE-2026-109618 y CVE-2026-109619.
+# Solo para VM (EC2, Azure VM, Compute Engine) y Kubernetes (EKS, AKS, GKE).
+# El contenedor se ejecuta con la jaula seccomp app/seccomp-vulnerable.json
+# (deniega syscalls de escape; la ejecucion de comandos la bloquea PHP
+# disable_functions + ausencia de shell) en VM, y seccompProfile RuntimeDefault +
+# NetworkPolicy egress-deny en Kubernetes. No usar en el nivel serverless.
+FROM php:8.5.11-cli-alpine
+
+WORKDIR /srv
+COPY web/ /srv/
+COPY app/vulnerable/index.php /srv/index.php
+COPY app/vulnerable/router.php /srv/router.php
+COPY app/vulnerable/runtime-profile.js /srv/assets/runtime-profile.js
+
+USER root
+# chown ANTES de borrar busybox: chown es un applet de busybox y desaparece con el rm.
+RUN adduser -D -H -u 101 lab \
+ && chown -R 101:101 /srv \
+ && rm -f /bin/sh /bin/ash /bin/busybox
+
+USER 101:101
+EXPOSE 8080
+ENTRYPOINT ["php", "-d", "disable_functions=exec,shell_exec,system,passthru,proc_open,popen,pcntl_exec", "-d", "ffi.enable=0", "-S", "0.0.0.0:8080", "-t", "/srv", "/srv/router.php"]
