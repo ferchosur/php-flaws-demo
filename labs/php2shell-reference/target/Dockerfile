@@ -1,0 +1,23 @@
+ARG PHP_APACHE_IMAGE
+FROM ${PHP_APACHE_IMAGE}
+
+ENV APACHE_RUN_DIR=/var/run/apache2 \
+    APACHE_RUN_USER=www-data \
+    APACHE_RUN_GROUP=www-data \
+    APACHE_PID_FILE=/var/run/apache2/apache2.pid \
+    APACHE_LOCK_DIR=/var/lock/apache2 \
+    APACHE_LOG_DIR=/var/log/apache2
+
+COPY labs/php2shell-reference/target/apache-ports.conf /etc/apache2/ports.conf
+COPY labs/php2shell-reference/target/apache-lab.conf /etc/apache2/sites-enabled/000-default.conf
+COPY labs/php2shell-reference/target/php.ini /usr/local/etc/php/conf.d/zz-reference.ini
+COPY labs/php2shell-reference/target/www/ /var/www/html/
+
+RUN install -d -o www-data -g www-data \
+      /var/run/apache2 /var/lock/apache2 /var/log/apache2 /var/lib/php/sessions \
+ && chown -R www-data:www-data /var/www/html \
+ && chmod -R a=rX /var/www/html
+
+USER 33:33
+EXPOSE 8080
+CMD ["apache2-foreground"]

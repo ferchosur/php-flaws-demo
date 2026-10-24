@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: lab-php2shell
+namePrefix: php2shell-
+resources:
+  - ../base
+images:
+  - name: php-lab-target
+    newName: php-flaws-demo/php2shell-reference
+    newTag: 8.4.26
+patches:
+  - target:
+      kind: Deployment
+      name: php-apache-target
+    patch: |-
+      - op: add
+        path: /spec/template/metadata/labels/lab.php-flaws-demo~1environment
+        value: php2shell-reference
+      - op: add
+        path: /spec/template/metadata/labels/lab.php-flaws-demo~1php-version
+        value: "8.4.26"

@@ -2,15 +2,31 @@
 **/.terraform/
 **/*.tfstate
 **/*.tfstate.*
-**/terraform.tfvars.json
+**/*.tfvars
+**/*.tfvars.json
 **/.terraform.lock.hcl.bak
-crash.log
+**/crash.log
+**/crash.*.log
+**/override.tf
+**/override.tf.json
+**/*_override.tf
+**/*_override.tf.json
+.terraformrc
+terraform.rc
 
 # Operator local configuration and deployment artifacts.
 deployment.json
 build/
-labs/
-
+labs/2026-10-lab-fg-phpflaws/
+# Secrets and credentials: safety net, none should ever live in the repo.
+.env
+.env.*
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+*-key.json
+*kubeconfig*
 
 # Python
 __pycache__/

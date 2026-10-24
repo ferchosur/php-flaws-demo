@@ -1,0 +1,41 @@
+name: php-flaws-demo-php2shell-reference
+
+services:
+  target:
+    image: php-flaws-demo/php2shell-reference:8.4.26
+    platform: linux/amd64
+    build:
+      context: ../..
+      dockerfile: labs/php2shell-reference/target/Dockerfile
+      args:
+        PHP_APACHE_IMAGE: php@sha256:745ef8b8e5291613b7f3e78d470c1497941e2ab548c869a7b0b506889ce6a1b3
+    ports:
+      - "127.0.0.1:18098:8080"
+    user: "33:33"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,uid=33,gid=33,mode=1777
+      - /var/run/apache2:rw,noexec,nosuid,nodev,size=1m,uid=33,gid=33,mode=755
+      - /var/lock/apache2:rw,noexec,nosuid,nodev,size=1m,uid=33,gid=33,mode=755
+      - /var/log/apache2:rw,noexec,nosuid,nodev,size=4m,uid=33,gid=33,mode=755
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 1.0
+    pids_limit: 64
+    networks: [lab]
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(file_get_contents('http://127.0.0.1:8080/healthz.php') === \"ok\\n\" ? 0 : 1);"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+networks:
+  lab:
+    name: php-flaws-demo-php2shell-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+      com.docker.network.bridge.enable_icc: "false"

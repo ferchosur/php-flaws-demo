@@ -1,0 +1,10 @@
+# Chart defaults are versioned separately. This file contains only feature overrides.
+# Never put bootstrap tokens or API keys here; create the chart-required Secret instead.
+visionOne:
+  runtimeSecurity:
+    enabled: true
+  vulnerabilityScanning:
+    enabled: true
+
+useExistingSecrets:
+  containerSecurityAuth: true
