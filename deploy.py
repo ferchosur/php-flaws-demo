@@ -66,10 +66,9 @@ K8S_PLATFORMS = {"eks", "aks", "gke"}
 VM_PLATFORMS = {"ec2", "vm", "compute-engine"}
 
 DOCKERFILES = {
-    "safe-simulation": "Dockerfile",
-    "vulnerable-php": "Dockerfile-vulnerable",
     "vulnerable-baseline": "Dockerfile-vulnerable-baseline",
 }
+DEFAULT_MODE = "vulnerable-baseline"
 # "Careless prod" mode: vulnerable and NOT hardened. Enables command execution
 # and lateral movement; local cluster or isolated labs only.
 BASELINE_MODE = "vulnerable-baseline"
@@ -184,6 +183,15 @@ def load_config():
     return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
 
 
+def configured_mode(config):
+    """Return a supported runtime profile, upgrading configs from removed profiles."""
+    mode = config.get("demo_mode", DEFAULT_MODE)
+    if mode not in DOCKERFILES:
+        print(f"Unsupported runtime profile '{mode}'; using '{DEFAULT_MODE}'.")
+        return DEFAULT_MODE
+    return mode
+
+
 def save_config(config):
     CONFIG_PATH.write_text(json.dumps(config, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"\nConfiguration saved to {CONFIG_PATH.name}.")
@@ -234,11 +242,9 @@ def configure(current):
     demo_mode = choose(
         "2a. Runtime profile",
         [
-            ("safe-simulation", "Safe simulation with static nginx"),
-            ("vulnerable-php", "PHP 8.5.11 vulnerable, hardened with a seccomp jail (confirmation on deploy)"),
-            ("vulnerable-baseline", "PHP 8.5.11 vulnerable, NOT hardened (careless prod; prefer the local cluster)"),
+            ("vulnerable-baseline", "PHP 8.5.11 vulnerable, without hardening (local isolated lab only)"),
         ],
-        default=current.get("demo_mode", "safe-simulation") if current.get("platform") == platform else "safe-simulation",
+        default=configured_mode(current) if current.get("platform") == platform else DEFAULT_MODE,
     )
     same_cloud = current.get("provider") == provider
     region = ask(
@@ -302,7 +308,7 @@ def show(config):
     print("\nSummary")
     print(f"  Cloud:           {cloud['label']}")
     print(f"  Infrastructure:  {name} ({desc})")
-    print(f"  Demo profile:    {config.get('demo_mode', 'safe-simulation')}")
+    print(f"  Demo profile:    {configured_mode(config)}")
     print(f"  Region:          {config['region']}")
     print(f"  Prefix:          {config['name_prefix']}")
     print(f"  Owner:           {config['owner']}  (created_by)")
@@ -432,7 +438,7 @@ def build_and_push(config, registry_url):
     image = image_uri(config, registry_url, tag)
     docker_login(config, registry_url)
     print(f"Building image {image} ...")
-    dockerfile = DOCKERFILES.get(config.get("demo_mode", "safe-simulation"), "Dockerfile")
+    dockerfile = DOCKERFILES[configured_mode(config)]
     run(["docker", "build", "-f", str(ROOT / "app" / dockerfile), "-t", image, str(ROOT)])
     print("Pushing to the private registry ...")
     run(["docker", "push", image])
@@ -511,6 +517,7 @@ def action_plan(config):
 
 def action_deploy(config):
     preflight(config)
+    config["demo_mode"] = configured_mode(config)
     show(config)
     if not confirm_word(
         config["name_prefix"],
@@ -520,13 +527,6 @@ def action_deploy(config):
         return
     if config.get("demo_mode") == BASELINE_MODE:
         die("the 'careless prod' profile (unhardened) is not deployed to the cloud from this menu: it enables egress and command execution with no containment and could pivot into the account. Use it with 'local-cluster' (or 'local').")
-    if config.get("demo_mode") == "vulnerable-php":
-        if not confirm_word(
-            "DEPLOY-VULNERABLE",
-            "WARNING: this will publish a vulnerable PHP runtime. Isolation: seccomp jail (escape syscalls denied), no shell or extra binaries, PHP command functions disabled, egress deny (K8s) or NSG/firewall 443+DNS (VM), no cloud identity or root.",
-        ):
-            print("Cancelled.")
-            return
     ensure_lab_folder(config)
     write_tfvars(config)
     tf(config, "init", "-input=false")
@@ -587,40 +587,18 @@ def action_local(config):
     tool("docker")
     name = f"{APP_TAG}-local"
     image = f"{APP_TAG}:local"
-    demo_mode = config.get("demo_mode", "safe-simulation")
-    hardened_vuln = demo_mode == "vulnerable-php"
-    baseline = demo_mode == BASELINE_MODE
+    demo_mode = configured_mode(config)
     dockerfile = DOCKERFILES[demo_mode]
-    seccomp_profile = ROOT / "app" / "seccomp-vulnerable.json"
     run(["docker", "build", "-f", str(ROOT / "app" / dockerfile), "-t", image, str(ROOT)])
     run(["docker", "rm", "-f", name], check=False)
-    if baseline:
-        # Careless prod: root, open egress, commands enabled, no seccomp or read-only.
-        print("WARNING: 'careless prod' profile with NO hardening (root, open egress, command execution enabled). Local machine only.")
-        run([
-            "docker", "run", "-d", "--name", name,
-            "-p", "127.0.0.1:8080:8080",
-            "--pids-limit", "200",
-            "--memory", "512m",
-            image,
-        ])
-    else:
-        network = f"{APP_TAG}-internal"
-        if hardened_vuln and not run(["docker", "network", "inspect", network], capture=True, check=False):
-            run(["docker", "network", "create", "--driver", "bridge", "--internal", network])
-        run([
-            "docker", "run", "-d", "--name", name,
-            "-p", "127.0.0.1:8080:8080",
-            *( ["--network", network] if hardened_vuln else [] ),
-            "--read-only", "--tmpfs", "/tmp",
-            "--user", "101:101",
-            "--cap-drop", "ALL",
-            "--security-opt", "no-new-privileges",
-            *( ["--security-opt", f"seccomp={seccomp_profile}"] if hardened_vuln else [] ),
-            "--pids-limit", "100",
-            "--memory", "256m",
-            image,
-        ])
+    print("WARNING: vulnerable runtime without hardening. Local machine only.")
+    run([
+        "docker", "run", "-d", "--name", name,
+        "-p", "127.0.0.1:8080:8080",
+        "--pids-limit", "200",
+        "--memory", "512m",
+        image,
+    ])
     if health_check("http://localhost:8080"):
         print("\nStore available on this machine only: http://localhost:8080")
     else:
@@ -647,8 +625,8 @@ Local cluster with kind — requirements:
 
 def render_local_cluster(config, image):
     """Renders the local cluster manifests into build/local-cluster/."""
-    demo_mode = config.get("demo_mode", "safe-simulation")
-    deployment = "20-deployment-baseline.yaml" if demo_mode == BASELINE_MODE else "20-deployment-hardened.yaml"
+    demo_mode = configured_mode(config)
+    deployment = "20-deployment-baseline.yaml"
     target = BUILD_DIR / "local-cluster"
     target.mkdir(parents=True, exist_ok=True)
     replacements = {"__OWNER__": config.get("owner", "Fgiraldo"), "__IMAGE__": image}
@@ -656,7 +634,7 @@ def render_local_cluster(config, image):
         text = (LOCAL_CLUSTER_SRC / "manifests" / name).read_text(encoding="utf-8")
         for marker, value in replacements.items():
             text = text.replace(marker, value)
-        out = target / name.replace("-baseline", "").replace("-hardened", "")
+        out = target / name.replace("-baseline", "")
         out.write_text(text, encoding="utf-8")
     return target
 
@@ -671,9 +649,7 @@ def action_local_cluster(config):
             "  Linux:  curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64 && chmod +x ./kind && mkdir -p ~/.local/bin && mv ./kind ~/.local/bin/\n"
             "  macOS:  brew install kind\n"
             "  Docs:   https://kind.sigs.k8s.io/docs/user/quick-start/#installation")
-    demo_mode = config.get("demo_mode", "safe-simulation")
-    if demo_mode == "vulnerable-php":
-        print("Note: on kind the network hardening (NetworkPolicy/egress-deny) does NOT apply (kindnet does not implement it). The rest of the hardening does.")
+    demo_mode = configured_mode(config)
     if demo_mode == BASELINE_MODE and not confirm_word(
         "LOCAL-BASELINE",
         "'Careless prod' profile with NO hardening in the local cluster: root, open egress, command execution. On your machine only.",
@@ -728,7 +704,7 @@ MENU = [
 
 
 def interactive():
-    print("PHP Flaws Demo — Worst Market\nSafe profile by default; vulnerable PHP on VM and Kubernetes with explicit confirmation.")
+    print("PHP Flaws Demo — Worst Market\nUnhardened vulnerable PHP profile for local labs.")
     while True:
         print("\nMain menu")
         for key, label in MENU:

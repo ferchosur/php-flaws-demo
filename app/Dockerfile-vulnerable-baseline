@@ -1,8 +1,7 @@
 # "Careless prod" profile: PHP 8.5.11 vulnerable (CVE-2026-109618 / CVE-2026-109619)
-# with NO hardening, to contrast with the hardened + seccomp profile.
+# without runtime hardening.
 #
-# Unlike Dockerfile-vulnerable, this profile mimics a production deployment where
-# security is not taken care of:
+# This profile mimics a production deployment where security is not taken care of:
 #   - runs as root,
 #   - keeps a shell (/bin/sh, bash) and network tools (curl, nc),
 #   - does NOT set disable_functions (exec/system/shell_exec remain available),

@@ -308,50 +308,18 @@
         { title: "In-process execution", detail: "On an affected installation, the reported result is remote code execution. The immediate scope depends on the process configuration and permissions." },
         { title: "Container boundary", detail: "Without additional isolation, the process could access the files and resources available to its user and its network." },
       ],
-      outcome: "Storyboard finished. No traffic was sent, no code was executed and this store does not use PHP.",
-    },
-    isolated: {
-      label: "Containment of this demo's deployment",
-      steps: [
-        { title: "HTTP request", detail: "Worst Market serves static files; it does not process requests with PHP." },
-        { title: "Runtime absent", detail: "The nginx image includes no PHP interpreter or FastCGI. This site neither reproduces nor is vulnerable to these CVEs." },
-        { title: "Unprivileged process", detail: "The image and manifests run nginx as UID 101, with no Linux capabilities and privilege escalation disabled." },
-        { title: "Impact limits", detail: "The deployment omits workload identity and limits filesystem and egress per platform. See residual risks in the README." },
-      ],
-      outcome: "Controls walkthrough finished. To fix a real PHP app, install the fixed version; containment does not patch the runtime.",
+      outcome: "Storyboard finished. No exploitation traffic was sent and no payload was executed.",
     },
   };
 
   function renderSecurity() {
     const vulnerableRuntime = window.MN_DEMO_MODE === "vulnerable-runtime";
-    const scopeNote = vulnerableRuntime
-      ? "Active profile: PHP 8.5.11, prior to the fixed version 8.5.12. The walkthrough does not send an exploitation request or run a payload."
-      : "Active profile: static site without PHP. The vulnerable runtime can only be selected for isolated Kubernetes deployments.";
-    SCENARIOS.vulnerable.outcome = vulnerableRuntime
-      ? "Storyboard finished. PHP 8.5.11 is active, but no exploitation traffic was sent and no payload was executed."
-      : "Storyboard finished. No traffic was sent, no code was executed and this profile does not use PHP.";
-    SCENARIOS.isolated.steps = vulnerableRuntime
-      ? [
-          { title: "PHP 8.5.11 runtime", detail: "This profile does load requests on a version prior to the official fix. A real exploit could execute code inside the PHP process." },
-          { title: "Unprivileged process", detail: "The process uses UID 101, is not root and has no Linux capabilities. PHP functions that invoke commands are disabled." },
-          { title: "No shell or persistent writes", detail: "The image removes the command interpreters; the root filesystem is read-only and /tmp is ephemeral." },
-          { title: "Egress and identity", detail: "Kubernetes NetworkPolicy denies egress except DNS; the pod gets no ServiceAccount token or cloud identity." },
-        ]
-      : [
-          { title: "HTTP request", detail: "Worst Market serves static files; it does not process requests with PHP." },
-          { title: "Runtime absent", detail: "The nginx image includes no PHP interpreter or FastCGI. This site neither reproduces nor is vulnerable to these CVEs." },
-          { title: "Unprivileged process", detail: "The image and manifests run nginx as UID 101, with no Linux capabilities and privilege escalation disabled." },
-          { title: "Impact limits", detail: "The deployment omits workload identity and limits filesystem and egress per platform. See residual risks in the README." },
-        ];
+    const scopeNote = "Active profile: PHP 8.5.11 without runtime hardening. The walkthrough does not send an exploitation request or run a payload.";
     view.innerHTML = `
       <h1 class="page-title">Security demo: PHP CVEs</h1>
       <div class="card">
         <p><code>CVE-2026-109618</code> and <code>CVE-2026-109619</code> are PHP runtime flaws that may allow remote code execution on affected installations. The flaw can occur before the application processes the request.</p>
         <p class="notice-inline"><b>Scope of this demo:</b> ${esc(scopeNote)} The walkthroughs are an educational storyboard; they do not send attack requests or execute code.</p>
-        <div class="scenario-picker" role="group" aria-label="Scenario">
-          <button class="button scenario-choice active" data-scenario="vulnerable" type="button">View risk chain</button>
-          <button class="button scenario-choice secondary" data-scenario="isolated" type="button">View applied containment</button>
-        </div>
         <p class="muted" id="scenario-label"></p>
         <button class="button" id="run-scenario" type="button">Walk through scenario</button>
         <ol class="steps" id="steps"></ol>
@@ -372,13 +340,6 @@
       ).join("");
       document.getElementById("scenario-status").textContent = "";
     };
-    document.querySelectorAll(".scenario-choice").forEach((button) => {
-      button.addEventListener("click", () => {
-        selected = button.dataset.scenario;
-        document.querySelectorAll(".scenario-choice").forEach((choice) => choice.classList.toggle("active", choice === button));
-        renderSteps();
-      });
-    });
     document.getElementById("run-scenario").addEventListener("click", () => runScenario(SCENARIOS[selected]));
     renderSteps();
   }
@@ -388,7 +349,6 @@
     const status = document.getElementById("scenario-status");
     const button = document.getElementById("run-scenario");
     button.disabled = true;
-    document.querySelectorAll(".scenario-choice").forEach((choice) => { choice.disabled = true; });
     items.forEach((item) => {
       item.classList.remove("done");
       item.querySelector(".step-state").textContent = "Pending";
@@ -401,7 +361,6 @@
         if (i === items.length - 1) {
           status.textContent = scenario.outcome;
           button.disabled = false;
-          document.querySelectorAll(".scenario-choice").forEach((choice) => { choice.disabled = false; });
         }
       }, 600 * (i + 1));
     });

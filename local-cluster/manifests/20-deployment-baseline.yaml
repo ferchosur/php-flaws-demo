@@ -1,5 +1,4 @@
-# "Careless prod" profile: no hardening. To contrast with the hardened profile
-# (20-deployment-hardened.yaml). Do NOT use in the cloud or outside the lab.
+# Vulnerable profile without runtime hardening. Do NOT use in the cloud or outside the lab.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
