@@ -7,6 +7,12 @@ services:
     build:
       context: ../..
       dockerfile: labs/php2shell-reference/target/Dockerfile
+      # Plain single-manifest image: BuildKit provenance/SBOM attestations turn the
+      # build into a manifest list, which `kind load docker-image` re-imports under a
+      # different containerd digest than `docker image inspect` reports, breaking the
+      # freshness check in deploy/verify scripts. Keep attestations off for local labs.
+      provenance: false
+      sbom: false
       args:
         PHP_APACHE_IMAGE: php@sha256:745ef8b8e5291613b7f3e78d470c1497941e2ab548c869a7b0b506889ce6a1b3
     ports:

@@ -314,7 +314,7 @@
 
   function renderSecurity() {
     const vulnerableRuntime = window.MN_DEMO_MODE === "vulnerable-runtime";
-    const scopeNote = window.MN_ACTIVE_PROFILE || "Active profile: PHP 8.5.11 without runtime hardening. The walkthrough does not send an exploitation request or run a payload.";
+    const scopeNote = window.MN_ACTIVE_PROFILE || "Active profile: vulnerable PHP without runtime hardening. The walkthrough does not send an exploitation request or run a payload.";
     view.innerHTML = `
       <h1 class="page-title">Security demo: PHP CVEs</h1>
       <div class="card">

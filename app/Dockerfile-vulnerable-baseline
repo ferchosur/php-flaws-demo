@@ -1,5 +1,6 @@
-# "Careless prod" profile: PHP 8.5.11 vulnerable (CVE-2026-109618 / CVE-2026-109619)
-# without runtime hardening.
+# "Careless prod" profile: PHP 8.4.26 vulnerable (CVE-2026-109618 / CVE-2026-109619)
+# without runtime hardening. 8.4.26 is the vulnerable version (fixed in 8.4.27);
+# the previous 8.5.11 base already carried the fix and was not a real target.
 #
 # This profile mimics a production deployment where security is not taken care of:
 #   - runs as root,
@@ -8,7 +9,7 @@
 #   - no seccomp applied.
 # Enables command execution and lateral movement inside the lab. Use only in the
 # local cluster or in isolated, ephemeral labs. NEVER with broad cloud identity.
-FROM php:8.5.11-cli-alpine
+FROM php:8.4.26-cli-alpine
 
 WORKDIR /srv
 COPY web/ /srv/

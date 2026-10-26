@@ -1,12 +1,19 @@
 # Compatibility and source matrix
 
-**PHP advisory check:** 2026-10-24. B and C intentionally use vulnerable PHP 8.4.26. No corrected image or remediation comparison is deployed in this phase. A version string alone does not prove patch status if a vendor backported fixes; retain image digest and package provenance.
+**PHP advisory check:** 2026-10-26. B, C and D intentionally use PHP releases below the current advisory's fixed versions. No corrected image or remediation comparison is deployed in this phase. A version string alone does not prove patch status if a vendor backported fixes; retain image digest and package provenance.
 
 | Environment | Runtime/image | Server and SAPI | Reference-specific settings | Status |
 |---|---|---|---|---|
-| A — existing Kind | PHP 8.5.11, `php-flaws-demo:local`, Alpine | Built-in server / CLI SAPI | Existing configuration and behavior preserved | Verified healthy; unchanged |
+| A — existing Kind | PHP 8.4.26, `php-flaws-demo:local`, Alpine | Built-in server / CLI SAPI | Worst Market app preserved; PHP now vulnerable 8.4.26 | Verified healthy; app served on 8.4.26 |
 | B — CVE-2026-109619 | Official PHP 8.4.26 Apache image, digest pinned; linux/amd64 | Apache prefork + mod_php; one worker; KeepAlive Off | `memory_limit=8M`, displayed errors, `max_input_vars=1000`, cookies on, strict mode off, upload progress and cleanup on, session path `/tmp` | Vulnerable target only; no PoC run |
 | C — combined PoC reference | Official `php:8.4.26-apache-bookworm`, digest `sha256:745ef8b8...`; linux/amd64 | **Observed:** Apache 2.4.68 prefork + mod_php; Debian 12; one worker | Independently taken from eness README: `display_errors=1`, `memory_limit=8M`, `max_input_vars=1000`, cookies on, strict mode off, upload progress on | Harness prepared; README's Apache 2.4.69 does not match the pinned Bookworm image; exact PoC profile BLOCKED |
+| D — supplied scanner site | Official PHP 8.3.26 Apache Bookworm; digest `sha256:33025d41...`; linux/amd64 | Apache/mod_php; Debian Bookworm; one worker; PHP page footer and `X-Powered-By` reveal version | `expose_php=On`; otherwise keeps the ZIP's PHP INI defaults | Scanner fingerprint target; below the advisory's 8.3.36 fixed release; no exploit compatibility claimed |
+
+### Team-shared `php-test-site.zip`
+
+The supplied `onprem/` folder contains a PHP 8.3.26 Apache image, an INI file with `expose_php=On`, and a static landing page that displays `PHP_VERSION`. It is designed to make a vulnerability scanner fingerprint its PHP runtime. The page has no exploit route or proof-of-concept logic. The lab preserves that page and runtime while adapting its container and Kubernetes network exposure for loopback-only local use.
+
+Sources: team-shared `C:\\Users\\fernandog\\Downloads\\php-test-site.zip`; [Trend Micro PHP security alert](https://success.trendmicro.com/en-US/solution/KA-0024789); [official PHP 8.3.26 release](https://www.php.net/releases/8_3_26.php).
 
 ## Source inspection
 

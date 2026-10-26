@@ -24,10 +24,10 @@ IMAGE_ID="$(docker image inspect php-flaws-demo:local --format '{{.Id}}')"
 RUNNING_ID="$(kubectl --context "$KUBE_CONTEXT" -n "$KUBE_NAMESPACE" get pod "$POD" -o jsonpath='{.status.containerStatuses[0].imageID}')"
 [[ "${RUNNING_ID##*@}" == "$IMAGE_ID" || "${RUNNING_ID#docker://}" == "$IMAGE_ID" ]] || { echo "FAIL deployed image ID differs from local image"; exit 1; }
 PHP_VERSION="$(kubectl --context "$KUBE_CONTEXT" -n "$KUBE_NAMESPACE" exec "$POD" -- php -r 'echo PHP_VERSION;')"
-[[ "$PHP_VERSION" == 8.5.11 ]] || { echo "FAIL original Kind PHP version: $PHP_VERSION"; exit 1; }
+[[ "$PHP_VERSION" == 8.4.26 ]] || { echo "FAIL original Kind PHP version: $PHP_VERSION"; exit 1; }
 [[ "$(kubectl --context "$KUBE_CONTEXT" -n "$KUBE_NAMESPACE" exec "$POD" -- php -r 'echo PHP_SAPI;')" == cli ]] || { echo "FAIL original server SAPI is not CLI"; exit 1; }
 [[ "$(curl --noproxy '*' --fail --silent --show-error -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/healthz)" == 200 ]] || { echo "FAIL original Kind HTTP health"; exit 1; }
-echo "PASS original Kind pod, image ID, PHP 8.5.11 CLI server and localhost health remain available"
+echo "PASS original Kind pod, image ID, PHP 8.4.26 CLI server and localhost health remain available"
 
 echo "== Static Compose/isolation checks =="
 python3 "$ROOT/scripts/validate_compose.py" cve619

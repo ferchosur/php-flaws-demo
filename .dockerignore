@@ -9,6 +9,9 @@ labs/*
 !labs/php2shell-reference/
 !labs/php2shell-reference/target/
 !labs/php2shell-reference/target/**
+!labs/php-test-site/
+!labs/php-test-site/target/
+!labs/php-test-site/target/**
 build/
 k8s/
 deployment.json

@@ -1,16 +1,17 @@
 # PHP Flaws Demo — reproducible local labs
 
-This repository preserves the existing php-flaws-demo application in Kind and adds two target-only comparison environments for CVE-2026-109618 and CVE-2026-109619. B and C can run in the same Kind cluster in separate namespaces; Compose remains available for standalone local reproduction. No exploit is included in or automatically run by these labs.
+This repository preserves the existing php-flaws-demo application in Kind and adds three independent PHP scanner/research targets. B and C cover reference profiles for CVE-2026-109618 and CVE-2026-109619; D deploys the team-shared PHP test site. They run in the same Kind cluster in separate namespaces; Compose remains available for standalone local reproduction. No exploit is included in or automatically run by these labs.
 
 ## Environments
 
 | Environment | Runtime | Access | Purpose |
 |---|---|---|---|
-| A — existing Kind app | PHP 8.5.11, built-in PHP web server (cli SAPI), php-flaws-demo:local | http://127.0.0.1:8080 | Preserved Worst Market application and baseline observation |
+| A — existing Kind app | PHP 8.4.26, built-in PHP web server (cli SAPI), php-flaws-demo:local | http://127.0.0.1:8080 | Preserved Worst Market application and baseline observation |
 | B — CVE-2026-109619 | Namespace `lab-cve-109619`; vulnerable PHP 8.4.26 Apache/mod_php | http://127.0.0.1:8081 | cozybear-dev vulnerable target profile only |
 | C — combined php2shell reference | Namespace `lab-php2shell`; PHP 8.4.26 Bookworm Apache/mod_php profile | http://127.0.0.1:8083 | Independent reference profile for the PoC's documented CVEs |
+| D — team PHP test site | Namespace `lab-php-test-site`; vulnerable PHP 8.3.26 Apache/mod_php | http://127.0.0.1:8082 | Scanner fingerprint target from `php-test-site.zip` |
 
-Environment A retains Worst Market. B and C use minimal `OK` PHP targets so their runtime configurations remain tied to their respective reference projects. B and C are independent vulnerable-only labs; this phase has no corrected-version workload or remediation comparison. TrendAI Container Security is a separate future activity.
+Environment A retains Worst Market. B and C serve the same Worst Market app on their vulnerable Apache/mod_php runtimes, with runtime configurations tied to their respective reference projects. D preserves the supplied landing page; its only PHP application behavior is rendering the version in the footer. B, C and D are separate target-only labs; this phase has no corrected-version workload or remediation comparison. TrendAI Container Security is a separate future activity.
 
 See docs/architecture.md, docs/kind-lab-deployment.md, docs/compatibility-matrix.md, docs/trendai-container-security.md, and docs/troubleshooting.md.
 
@@ -42,13 +43,14 @@ Environment A's original namespace, Deployment, Service, image reference, NodePo
 ./scripts/verify-kind-labs.sh
 ~~~
 
-The `up` script builds or reuses the pinned images, loads them into the existing Kind node, creates resources only in `lab-cve-109619`, `lab-php2shell`, and the empty `trendmicro-system` namespace, verifies health, and starts all three localhost forwards in the background. It never creates/recreates Kind. See [Kind deployment](docs/kind-lab-deployment.md) for access and stop commands.
+The `up` script builds or reuses the lab images, loads them into the existing Kind node, creates resources only in the lab namespaces and the empty `trendmicro-system` namespace, verifies health, and starts the localhost forwards in the background. It never creates/recreates Kind. See [Kind deployment](docs/kind-lab-deployment.md) for access and stop commands.
 
 ## Standalone Compose reproduction
 
 ~~~bash
 docker compose -f labs/cve-2026-109619/docker-compose.yml up --build -d --wait
 docker compose -f labs/php2shell-reference/docker-compose.yml up --build -d --wait
+docker compose -f labs/php-test-site/docker-compose.yml up --build -d --wait
 ~~~
 
 Compose is an independent reproduction option and uses its own local ports/networks. Stop only those projects with their corresponding `docker compose ... down` commands. C intentionally has no PoC container or exploit command.
@@ -59,7 +61,7 @@ Compose is an independent reproduction option and uses its own local ports/netwo
 ./scripts/verify-labs.sh
 ~~~
 
-`scripts/verify-labs.sh` checks the existing Kind app and standalone Compose profiles. `scripts/verify-kind-labs.sh` checks the three Kind environments, uses localhost port-forwards, checks NetworkPolicy traffic separation, and makes no change to A.
+`scripts/verify-labs.sh` checks the existing Kind app and standalone Compose profiles. `scripts/verify-kind-labs.sh` checks the four Kind environments, uses localhost port-forwards, checks NetworkPolicy traffic separation, and makes no change to A.
 
 ## TrendAI Vision One Container Security
 
@@ -67,6 +69,6 @@ The `trendmicro-system` namespace and a secret-free values template are prepared
 
 ## PHP security status
 
-The upstream PHP advisory identifies PHP 8.5.12, 8.4.27, 8.3.36, and 8.2.35 as the first fixed releases for their branches. Vendor packages may backport fixes without changing the upstream version string; use package provenance and image digest as well as the version. The two CVEs are distinct: CVE-2026-109618 concerns OOM-related request-state corruption; CVE-2026-109619 concerns stale request-owned state crossing request boundaries.
+The upstream PHP advisory identifies PHP 8.5.12, 8.4.27, 8.3.36, and 8.2.35 as the first fixed releases for their branches. Vendor packages may backport fixes without changing the upstream version string; use package provenance and image digest as well as the version. The two CVEs are distinct: CVE-2026-109618 concerns OOM-related request-state corruption; CVE-2026-109619 concerns stale request-owned state crossing request boundaries. D uses PHP 8.3.26, below the advisory's fixed 8.3.36 release, as a scanner fingerprint target; it is not an exploit reproduction.
 
 Sources and consultation date are recorded in docs/compatibility-matrix.md.

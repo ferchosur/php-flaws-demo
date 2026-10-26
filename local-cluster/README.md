@@ -1,6 +1,6 @@
 # Local cluster (kind)
 
-Run the single vulnerable PHP 8.5.11 profile on Kubernetes locally. It allows PHP command execution and has no runtime hardening; use an isolated machine with synthetic data.
+Run the single vulnerable PHP 8.4.26 profile on Kubernetes locally. It allows PHP command execution and has no runtime hardening; use an isolated machine with synthetic data.
 
 ## Requirements
 

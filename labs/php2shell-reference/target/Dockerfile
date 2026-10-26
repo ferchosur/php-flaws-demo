@@ -11,6 +11,9 @@ ENV APACHE_RUN_DIR=/var/run/apache2 \
 COPY labs/php2shell-reference/target/apache-ports.conf /etc/apache2/ports.conf
 COPY labs/php2shell-reference/target/apache-lab.conf /etc/apache2/sites-enabled/000-default.conf
 COPY labs/php2shell-reference/target/php.ini /usr/local/etc/php/conf.d/zz-reference.ini
+# Serve the same Worst Market storefront as environment A; the lab overlay below
+# re-adds the PHP entrypoint, diagnostics and the vulnerable runtime profile.
+COPY web/ /var/www/html/
 COPY labs/php2shell-reference/target/www/ /var/www/html/
 
 RUN install -d -o www-data -g www-data \

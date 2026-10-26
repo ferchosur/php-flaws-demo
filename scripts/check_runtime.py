@@ -16,8 +16,8 @@ def main():
             raise SystemExit(f"FAIL health: HTTP {response.status}, body={health!r}")
     with local_opener.open(base, timeout=5) as response:
         page = response.read().decode("utf-8", errors="replace")
-        if response.status != 200 or page.strip() != "OK":
-            raise SystemExit(f"FAIL reference target: HTTP {response.status}, expected body 'OK'")
+        if response.status != 200 or "Worst Market" not in page:
+            raise SystemExit(f"FAIL storefront: HTTP {response.status}, 'Worst Market' marker absent")
     with local_opener.open(f"{base}/__lab_runtime.php", timeout=5) as response:
         runtime = json.load(response)
     if runtime.get("php_version") != expected_version:

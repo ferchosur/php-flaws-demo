@@ -242,7 +242,7 @@ def configure(current):
     demo_mode = choose(
         "2a. Runtime profile",
         [
-            ("vulnerable-baseline", "PHP 8.5.11 vulnerable, without hardening (local isolated lab only)"),
+            ("vulnerable-baseline", "PHP 8.4.26 vulnerable, without hardening (local isolated lab only)"),
         ],
         default=configured_mode(current) if current.get("platform") == platform else DEFAULT_MODE,
     )

@@ -18,6 +18,7 @@ kind get clusters | grep -Fxq "$CLUSTER" || {
 IMAGES=(
   php-flaws-demo/cve-109619-vuln:8.4.26
   php-flaws-demo/php2shell-reference:8.4.26
+  php-flaws-demo/php-test-site:8.3.26
 )
 for IMAGE in "${IMAGES[@]}"; do
   docker image inspect "$IMAGE" >/dev/null || {
@@ -34,25 +35,50 @@ kubectl --context "$CONTEXT" apply -k "$ROOT/k8s/labs/cve-109619/vulnerable"
 kubectl --context "$CONTEXT" apply -f "$ROOT/k8s/labs/cve-109619/vulnerable/service.yaml"
 kubectl --context "$CONTEXT" apply -k "$ROOT/k8s/labs/php2shell-reference"
 kubectl --context "$CONTEXT" apply -f "$ROOT/k8s/labs/php2shell-reference/service.yaml"
+kubectl --context "$CONTEXT" apply -k "$ROOT/k8s/labs/php-test-site"
 
 # Local tags may now refer to rebuilt images while existing pods still use the
-# previous image ID. Restart only lab Deployments whose loaded image changed.
+# previous content. Restart only lab Deployments whose running container differs
+# from the freshly loaded tag.
+#
+# Compare config ids read from the node's containerd, not docker image IDs: once
+# `kind load` imports an image, containerd records it under a synthetic
+# `import-<date>@<manifest-digest>` repoDigest that never equals `docker image
+# inspect --format {{.Id}}`, and the kubelet reports the first of several such
+# repoDigests. The image *config id* (`crictl inspecti .status.id` for the tag,
+# `crictl ps` imageRef for the running container) is stable and comparable.
+NODE="${CLUSTER}-control-plane"
+node_tag_config_id() {
+  docker exec "$NODE" crictl inspecti "$1" 2>/dev/null \
+    | python3 -c 'import sys,json;print(json.load(sys.stdin)["status"]["id"])' 2>/dev/null || true
+}
+running_container_config_id() {
+  local namespace="$1" deployment="$2"
+  docker exec "$NODE" crictl ps -o json 2>/dev/null | python3 -c '
+import sys, json
+ns, dep = sys.argv[1], sys.argv[2]
+d = json.load(sys.stdin)
+print(next((c["imageRef"] for c in d["containers"]
+            if c["labels"].get("io.kubernetes.pod.namespace") == ns
+            and c["labels"].get("io.kubernetes.pod.name", "").startswith(dep)), ""))
+' "$namespace" "$deployment" 2>/dev/null || true
+}
 restart_if_image_changed() {
-  local namespace="$1" deployment="$2" version="$3" image="$4"
-  local pod expected running
-  pod="$(kubectl --context "$CONTEXT" -n "$namespace" get pods -l "lab.php-flaws-demo/php-version=$version" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
-  [[ -n "$pod" ]] || return 0
-  expected="$(docker image inspect "$image" --format '{{.Id}}')"
-  running="$(kubectl --context "$CONTEXT" -n "$namespace" get pod "$pod" -o jsonpath='{.status.containerStatuses[0].imageID}' 2>/dev/null || true)"
-  if [[ "${running##*@}" != "$expected" ]]; then
+  local namespace="$1" deployment="$2" image="$3"
+  local tag_cfg run_cfg
+  tag_cfg="$(node_tag_config_id "$image")"
+  run_cfg="$(running_container_config_id "$namespace" "$deployment")"
+  if [[ -z "$tag_cfg" || "$run_cfg" != "$tag_cfg" ]]; then
     echo "== Refresh $namespace/$deployment to the rebuilt local image =="
     kubectl --context "$CONTEXT" -n "$namespace" rollout restart "deployment/$deployment"
   fi
 }
-restart_if_image_changed lab-cve-109619 vuln-php-apache-target 8.4.26 php-flaws-demo/cve-109619-vuln:8.4.26
-restart_if_image_changed lab-php2shell php2shell-php-apache-target 8.4.26 php-flaws-demo/php2shell-reference:8.4.26
+restart_if_image_changed lab-cve-109619 vuln-php-apache-target php-flaws-demo/cve-109619-vuln:8.4.26
+restart_if_image_changed lab-php2shell php2shell-php-apache-target php-flaws-demo/php2shell-reference:8.4.26
+restart_if_image_changed lab-php-test-site php-test-site php-flaws-demo/php-test-site:8.3.26
 
 kubectl --context "$CONTEXT" -n lab-cve-109619 rollout status deployment/vuln-php-apache-target --timeout=180s
 kubectl --context "$CONTEXT" -n lab-php2shell rollout status deployment/php2shell-php-apache-target --timeout=180s
+kubectl --context "$CONTEXT" -n lab-php-test-site rollout status deployment/php-test-site --timeout=180s
 "$ROOT/scripts/verify-kind-labs.sh"
 "$ROOT/scripts/start-kind-port-forwards.sh"

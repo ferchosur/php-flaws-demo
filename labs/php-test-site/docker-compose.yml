@@ -1,0 +1,43 @@
+name: php-flaws-demo-php-test-site
+
+services:
+  web:
+    image: php-flaws-demo/php-test-site:8.3.26
+    platform: linux/amd64
+    build:
+      context: ../..
+      dockerfile: labs/php-test-site/target/Dockerfile
+      provenance: false
+      sbom: false
+      args:
+        PHP_APACHE_IMAGE: php:8.3.26-apache-bookworm@sha256:33025d411fb4ed9b96947af349dd382afee37024e5d940f9fa17e1fa41753ff3
+    ports:
+      - "127.0.0.1:18082:8080"
+    user: "33:33"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,uid=33,gid=33,mode=1777
+      - /var/run/apache2:rw,noexec,nosuid,nodev,size=1m,uid=33,gid=33,mode=755
+      - /var/lock/apache2:rw,noexec,nosuid,nodev,size=1m,uid=33,gid=33,mode=755
+      - /var/log/apache2:rw,noexec,nosuid,nodev,size=4m,uid=33,gid=33,mode=755
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 1.0
+    pids_limit: 64
+    networks: [lab]
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8080/') === false ? 1 : 0);"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+
+networks:
+  lab:
+    name: php-flaws-demo-php-test-site-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+      com.docker.network.bridge.enable_icc: "false"
